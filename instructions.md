@@ -2,11 +2,11 @@ This **Product Requirements Document (PRD)** is designed for a solo developer to
 
 ---
 
-# PRD: "LogLogic" – The AI Product Marketing Agent
+# PRD: "Commitly" – The AI Product Marketing Agent
 
 ## 1. Executive Summary
 
-**LogLogic** is an AI-powered B2B agent that bridges the gap between technical development and marketing. It monitors GitHub commits, identifies "value-add" updates, and automatically drafts release notes and social media content for developers and founders to review and publish.
+**Commitly** is an AI-powered B2B agent that bridges the gap between technical development and marketing. It monitors GitHub commits, identifies "value-add" updates, and automatically drafts release notes and social media content for developers and founders to review and publish.
 
 ## 2. Target Audience
 

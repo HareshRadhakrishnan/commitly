@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LogLogic - AI Product Marketing Agent",
+  title: "Commitly - AI Product Marketing Agent",
   description: "Turn GitHub commits into release notes and social media content",
 };
 

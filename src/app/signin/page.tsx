@@ -23,7 +23,7 @@ export default async function SignInPage({
         <div className="flex flex-col items-center gap-2 text-center">
           <Sparkles className="h-12 w-12 text-amber-500" />
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-            Sign in to LogLogic
+            Sign in to Commitly
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Use your email or a provider below

@@ -59,7 +59,7 @@ export default async function ReviewPage({
             <div className="flex items-center gap-2">
               <Sparkles className="h-6 w-6 text-amber-500" />
               <span className="font-semibold text-zinc-900 dark:text-zinc-50">
-                LogLogic
+                Commitly
               </span>
             </div>
           </div>

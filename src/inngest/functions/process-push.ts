@@ -33,7 +33,7 @@ export const processPush = inngest.createFunction(
     });
 
     if (!project) {
-      return { skipped: true, reason: "repo not connected to LogLogic" };
+      return { skipped: true, reason: "repo not connected to Commitly" };
     }
 
     const isSignificant = await step.run("check-significance", async () => {

@@ -5,7 +5,7 @@
 ### Option A: GitHub App (recommended for multi-repo)
 
 1. Go to [GitHub Developer Settings](https://github.com/settings/apps) → **New GitHub App**
-2. **Name:** LogLogic (or your choice)
+2. **Name:** Commitly (or your choice)
 3. **Homepage URL:** `http://localhost:3000` (or your deployed URL)
 4. **Webhook:**
    - **Active:** ✓
