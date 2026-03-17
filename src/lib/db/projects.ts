@@ -5,6 +5,7 @@ export async function getProjectByRepoId(githubRepoId: number) {
     .from("projects")
     .select("id, user_id, github_repo_id, repo_name")
     .eq("github_repo_id", githubRepoId)
+    .eq("is_active", true)
     .single();
 
   if (error || !data) return null;

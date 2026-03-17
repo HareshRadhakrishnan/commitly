@@ -27,7 +27,7 @@ Version 2 transforms Commitly from MVP to a production-ready product with **zero
 1. User clicks "Connect GitHub" → GitHub App installation OAuth flow
 2. After install, we receive `installation_id` from webhook or callback
 3. Fetch repos via `GET /installation/repositories` (GitHub App API)
-4. Display: searchable, paginated list with repo name, avatar, description
+4. Display: searchable, paginated list with repo name, avatar, description, **ordered by date last updated (newest first)**
 5. "Connect" button: creates project in DB, webhook is already active (GitHub App sends to all installed repos)
 6. "Disconnect" button: set `is_active = false` (we stop processing; user can uninstall app separately)
 
