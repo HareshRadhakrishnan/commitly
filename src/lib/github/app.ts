@@ -1,0 +1,136 @@
+import jwt from "jsonwebtoken";
+
+const GITHUB_API = "https://api.github.com";
+
+export function getGitHubAppJwt(): string {
+  const appId = process.env.GITHUB_APP_ID;
+  let privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
+
+  if (!appId || !privateKey) {
+    throw new Error("GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY must be set");
+  }
+
+  privateKey = privateKey.replace(/\\n/g, "\n");
+
+  const now = Math.floor(Date.now() / 1000);
+  return jwt.sign(
+    {
+      iat: now - 60,
+      exp: now + 600,
+      iss: appId,
+    },
+    privateKey,
+    { algorithm: "RS256" }
+  );
+}
+
+export async function getInstallationToken(installationId: number): Promise<string> {
+  const token = getGitHubAppJwt();
+
+  const res = await fetch(
+    `${GITHUB_API}/app/installations/${installationId}/access_tokens`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`GitHub API error: ${res.status} ${err}`);
+  }
+
+  const data = (await res.json()) as { token: string };
+  return data.token;
+}
+
+export type GitHubRepo = {
+  id: number;
+  full_name: string;
+  name: string;
+  description: string | null;
+  private: boolean;
+  html_url: string;
+  updated_at: string;
+};
+
+async function fetchRepoPage(
+  token: string,
+  page: number,
+  perPage: number
+): Promise<{ repositories: GitHubRepo[]; total_count: number }> {
+  const res = await fetch(
+    `${GITHUB_API}/installation/repositories?page=${page}&per_page=${perPage}`,
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`GitHub API error: ${res.status} ${err}`);
+  }
+
+  return res.json() as Promise<{ total_count: number; repositories: GitHubRepo[] }>;
+}
+
+/**
+ * Fetches all installation repos across every GitHub page in parallel,
+ * then sorts the full set by updated_at so ordering is globally correct.
+ */
+async function fetchAllInstallationRepos(
+  installationId: number
+): Promise<{ repositories: GitHubRepo[]; total_count: number }> {
+  const token = await getInstallationToken(installationId);
+
+  // GitHub allows max 100 per page — use it to minimise round trips
+  const BATCH_SIZE = 100;
+
+  const first = await fetchRepoPage(token, 1, BATCH_SIZE);
+  const totalCount = first.total_count;
+  const totalPages = Math.ceil(totalCount / BATCH_SIZE);
+
+  const remainingPages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+  const rest = await Promise.all(
+    remainingPages.map((p) => fetchRepoPage(token, p, BATCH_SIZE))
+  );
+
+  const all = [
+    ...first.repositories,
+    ...rest.flatMap((r) => r.repositories),
+  ].sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  );
+
+  return { repositories: all, total_count: totalCount };
+}
+
+export async function listInstallationRepos(
+  installationId: number,
+  page: number = 1,
+  perPage: number = 30
+): Promise<{ repositories: GitHubRepo[]; total_count: number }> {
+  const { repositories, total_count } = await fetchAllInstallationRepos(installationId);
+
+  const start = (page - 1) * perPage;
+  return {
+    repositories: repositories.slice(start, start + perPage),
+    total_count,
+  };
+}
+
+export function getGitHubAppInstallUrl(): string {
+  const slug = process.env.GITHUB_APP_SLUG;
+  if (!slug) {
+    throw new Error("GITHUB_APP_SLUG must be set (e.g. commitly or your-app-name)");
+  }
+  return `https://github.com/apps/${slug}/installations/new`;
+}
