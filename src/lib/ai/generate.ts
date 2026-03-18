@@ -1,9 +1,10 @@
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import type { PushCommit } from "@/lib/github/webhook";
+import type { CommitWithContext } from "./prompts";
 import { buildSignificancePrompt, buildGenerationPrompt } from "./prompts";
+import type { PushCommit } from "@/lib/github/webhook";
 
-export async function checkSignificance(commits: PushCommit[]): Promise<boolean> {
+export async function checkSignificance(commits: CommitWithContext[]): Promise<boolean> {
   const { text } = await generateText({
     model: openai("gpt-4o-mini"),
     prompt: buildSignificancePrompt(commits),

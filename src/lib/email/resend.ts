@@ -5,6 +5,43 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM =
   process.env.RESEND_FROM ?? "Commitly <onboarding@resend.dev>";
 
+export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  const { data, error } = await resend.emails.send({
+    from: FROM,
+    to: [to],
+    subject: "Reset your Commitly password",
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; max-width: 560px; margin: 0 auto; padding: 24px;">
+  <div style="margin-bottom: 24px;">
+    <span style="font-size: 24px; font-weight: 700; color: #f59e0b;">Commitly</span>
+  </div>
+  <h1 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0 0 16px;">
+    Reset your password
+  </h1>
+  <p style="margin: 0 0 24px; color: #6b7280;">
+    We received a request to reset your password. Click the button below to choose a new password. This link will expire in 1 hour.
+  </p>
+  <a href="${resetUrl}" style="display: inline-block; background: #f59e0b; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+    Reset password
+  </a>
+  <p style="margin: 24px 0 0; font-size: 13px; color: #9ca3af;">
+    If you didn't request a password reset, you can safely ignore this email.
+  </p>
+</body>
+</html>
+    `.trim(),
+  });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function sendDraftNotificationEmail(
   to: string,
   reviewUrl: string,

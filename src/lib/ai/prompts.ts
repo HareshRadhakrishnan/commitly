@@ -1,16 +1,29 @@
 import type { PushCommit } from "@/lib/github/webhook";
 
-export function buildSignificancePrompt(commits: PushCommit[]): string {
-  const commitList = commits
-    .map((c) => `- ${c.message} (${c.id.slice(0, 7)})`)
-    .join("\n");
+export type CommitWithContext = PushCommit & {
+  diffText?: string;
+};
 
-  return `You are a technical product analyst. Look at these Git commits and determine if they contain user-facing value.
+function formatCommitForPrompt(c: CommitWithContext): string {
+  const header = `Commit ${c.id.slice(0, 7)}: ${c.message}`;
+  const fileLists: string[] = [];
+  if (c.added?.length) fileLists.push(`Added: ${c.added.join(", ")}`);
+  if (c.modified?.length) fileLists.push(`Modified: ${c.modified.join(", ")}`);
+  if (c.removed?.length) fileLists.push(`Removed: ${c.removed.join(", ")}`);
+  const fileInfo = fileLists.length ? `\nFiles: ${fileLists.join(" | ")}` : "";
+  const diff = c.diffText ? `\nDiff:\n${c.diffText}` : "";
+  return `${header}${fileInfo}${diff}`;
+}
+
+export function buildSignificancePrompt(commits: CommitWithContext[]): string {
+  const commitBlocks = commits.map((c) => formatCommitForPrompt(c)).join("\n\n---\n\n");
+
+  return `You are a technical product analyst. Look at these Git commits (messages, changed files, and code diffs) and determine if they contain user-facing value.
 
 COMMITS:
-${commitList}
+${commitBlocks}
 
-Consider "significant" as: new features, major bug fixes, notable improvements, or breaking changes that affect users.
+Consider "significant" as: new features, major bug fixes, notable improvements, or breaking changes that affect users. Use the diff to see what actually changed—don't rely only on the commit message.
 Consider "NOT significant" as: typo fixes, refactors, dependency updates, config changes, .gitignore updates, code style fixes, or internal-only changes.
 
 Answer with exactly one word: YES or NO`;

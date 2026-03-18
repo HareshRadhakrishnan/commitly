@@ -137,4 +137,3 @@ Table ReleaseDrafts {
 
 ---
 
-**Would you like me to generate the specific "System Prompt" for the significance filter or the "GitHub Webhook" handler code to get you started?**

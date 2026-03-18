@@ -127,6 +127,61 @@ export async function listInstallationRepos(
   };
 }
 
+export type CommitFile = {
+  filename: string;
+  status: string;
+  patch: string | null;
+  additions: number;
+  deletions: number;
+};
+
+export async function fetchCommitDiff(
+  repoFullName: string,
+  installationId: number,
+  sha: string
+): Promise<{ message: string; files: CommitFile[] } | null> {
+  const [owner, repo] = repoFullName.split("/", 2);
+  if (!owner || !repo) return null;
+
+  const token = await getInstallationToken(installationId);
+  const res = await fetch(
+    `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${sha}`,
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    }
+  );
+
+  if (!res.ok) return null;
+
+  const data = (await res.json()) as {
+    commit?: { message?: string };
+    files?: Array<{
+      filename?: string;
+      status?: string;
+      patch?: string | null;
+      additions?: number;
+      deletions?: number;
+    }>;
+  };
+
+  const files: CommitFile[] = (data.files ?? []).map((f) => ({
+    filename: f.filename ?? "",
+    status: f.status ?? "modified",
+    patch: f.patch ?? null,
+    additions: f.additions ?? 0,
+    deletions: f.deletions ?? 0,
+  }));
+
+  return {
+    message: data.commit?.message ?? "",
+    files,
+  };
+}
+
 export function getGitHubAppInstallUrl(): string {
   const slug = process.env.GITHUB_APP_SLUG;
   if (!slug) {

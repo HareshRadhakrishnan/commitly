@@ -9,7 +9,7 @@ export function getCredAuthId(email: string) {
 export async function getUserById(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("users")
-    .select("id, auth_id, email, onboarding_complete")
+    .select("id, auth_id, email, onboarding_complete, subscription_tier, stripe_customer_id, stripe_subscription_id")
     .eq("id", userId)
     .single();
 
@@ -20,7 +20,7 @@ export async function getUserById(userId: string) {
 export async function getOrCreateUser(authId: string, email: string) {
   const { data: existing } = await supabaseAdmin
     .from("users")
-    .select("id, auth_id, email, onboarding_complete")
+    .select("id, auth_id, email, onboarding_complete, subscription_tier")
     .eq("auth_id", authId)
     .single();
 
@@ -31,7 +31,7 @@ export async function getOrCreateUser(authId: string, email: string) {
   const { data: created, error } = await supabaseAdmin
     .from("users")
     .insert({ auth_id: authId, email })
-    .select("id, auth_id, email, onboarding_complete")
+    .select("id, auth_id, email, onboarding_complete, subscription_tier")
     .single();
 
   if (error) throw error;
@@ -64,5 +64,19 @@ export async function getCredentialUser(email: string) {
     .single();
 
   if (error || !data) return null;
+  return data;
+}
+
+export async function updateUserPassword(email: string, passwordHash: string) {
+  const authId = getCredAuthId(email);
+
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .update({ password_hash: passwordHash })
+    .eq("auth_id", authId)
+    .select("id")
+    .single();
+
+  if (error) throw error;
   return data;
 }

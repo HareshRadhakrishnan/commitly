@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { getOrCreateUser } from "@/lib/db/users";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { canConnectRepo } from "@/lib/subscription";
 
 export async function addProject(repoId: number, repoName: string) {
   const session = await auth();
@@ -12,6 +13,16 @@ export async function addProject(repoId: number, repoName: string) {
   if (!authId) throw new Error("No user id");
 
   const dbUser = await getOrCreateUser(authId, session.user.email ?? "");
+
+  const { count } = await supabaseAdmin
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", dbUser.id)
+    .eq("is_active", true);
+  const currentRepos = count ?? 0;
+  if (!canConnectRepo(dbUser.subscription_tier, currentRepos)) {
+    throw new Error("Repo limit reached. Upgrade to connect more repositories.");
+  }
 
   const { error } = await supabaseAdmin.from("projects").insert({
     user_id: dbUser.id,
@@ -39,10 +50,31 @@ export async function connectRepo(repoId: number, repoName: string) {
     .eq("github_repo_id", repoId)
     .single();
 
+  if (!existing) {
+    const { count } = await supabaseAdmin
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", dbUser.id)
+      .eq("is_active", true);
+    const currentRepos = count ?? 0;
+    if (!canConnectRepo(dbUser.subscription_tier, currentRepos)) {
+      throw new Error("Repo limit reached. Upgrade to connect more repositories.");
+    }
+  }
+
+  const { data: installation } = await supabaseAdmin
+    .from("github_installations")
+    .select("installation_id")
+    .eq("user_id", dbUser.id)
+    .limit(1)
+    .single();
+
+  const installationId = installation?.installation_id ?? null;
+
   if (existing) {
     await supabaseAdmin
       .from("projects")
-      .update({ is_active: true })
+      .update({ is_active: true, github_installation_id: installationId })
       .eq("id", existing.id);
   } else {
     const { error } = await supabaseAdmin.from("projects").insert({
@@ -50,6 +82,7 @@ export async function connectRepo(repoId: number, repoName: string) {
       github_repo_id: repoId,
       repo_name: repoName,
       is_active: true,
+      github_installation_id: installationId,
     });
     if (error) throw error;
   }

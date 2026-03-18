@@ -19,6 +19,11 @@ export default async function DashboardPage() {
 
   const dbUser = await getOrCreateUser(authId, session.user.email ?? "");
 
+  const [draftCount, limits] = await Promise.all([
+    import("@/lib/db/usage").then((m) => m.getDraftCountForUserThisMonth(dbUser.id)),
+    import("@/lib/subscription").then((m) => m.getTierLimits(dbUser.subscription_tier)),
+  ]);
+
   const { data: projects } = await supabaseAdmin
     .from("projects")
     .select("id, repo_name, github_repo_id")
@@ -55,6 +60,12 @@ export default async function DashboardPage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard/billing"
+              className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+            >
+              Billing
+            </Link>
             <span className="text-sm text-zinc-600 dark:text-zinc-400">
               {session.user.email ?? session.user.name}
             </span>
@@ -84,10 +95,24 @@ export default async function DashboardPage() {
           You&apos;re signed in. Next up: connect your GitHub repositories and
           configure your brand voice.
         </p>
-        <p className="mt-4 rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-          DB connected ✓ — Onboarding:{" "}
-          {dbUser.onboarding_complete ? "Complete" : "Pending"}
-        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <p className="rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            DB connected ✓ — Onboarding:{" "}
+            {dbUser.onboarding_complete ? "Complete" : "Pending"}
+          </p>
+          <p className="rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+            Drafts this month: {draftCount}
+            {limits.draftsPerMonth === Infinity ? "" : ` / ${limits.draftsPerMonth}`}
+          </p>
+          {limits.draftsPerMonth !== Infinity && draftCount >= limits.draftsPerMonth && (
+            <Link
+              href="/dashboard/billing"
+              className="text-sm font-medium text-amber-600 hover:text-amber-700 dark:text-amber-400"
+            >
+              Upgrade for more drafts →
+            </Link>
+          )}
+        </div>
 
         <section className="mt-8">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">

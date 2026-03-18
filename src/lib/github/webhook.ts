@@ -29,6 +29,9 @@ export type PushCommit = {
   message: string;
   author: { name: string; email: string };
   url: string;
+  added?: string[];
+  modified?: string[];
+  removed?: string[];
 };
 
 export type PushPayload = {
@@ -49,23 +52,32 @@ export function parsePushPayload(body: unknown): PushPayload | null {
   if (payload.repository && typeof payload.repository === "object") {
     const repo = payload.repository as Record<string, unknown>;
     const commits = Array.isArray(payload.commits)
-      ? (payload.commits as Array<Record<string, unknown>>).map((c) => ({
-          id: String(c.id ?? c.sha ?? ""),
-          message: String(c.message ?? ""),
-          author:
-            c.author && typeof c.author === "object"
-              ? {
-                  name: String((c.author as Record<string, unknown>).name ?? ""),
-                  email: String((c.author as Record<string, unknown>).email ?? ""),
-                }
-              : { name: "", email: "" },
-          url: String(c.url ?? ""),
-        }))
+      ? (payload.commits as Array<Record<string, unknown>>).map((c) => {
+          const arr = (x: unknown) =>
+            Array.isArray(x) ? (x as string[]).filter((v) => typeof v === "string") : [];
+          return {
+            id: String(c.id ?? c.sha ?? ""),
+            message: String(c.message ?? ""),
+            author:
+              c.author && typeof c.author === "object"
+                ? {
+                    name: String((c.author as Record<string, unknown>).name ?? ""),
+                    email: String((c.author as Record<string, unknown>).email ?? ""),
+                  }
+                : { name: "", email: "" },
+            url: String(c.url ?? ""),
+            added: arr(c.added),
+            modified: arr(c.modified),
+            removed: arr(c.removed),
+          };
+        })
       : [];
 
     const headCommit = payload.head_commit && typeof payload.head_commit === "object"
       ? (payload.head_commit as Record<string, unknown>)
       : null;
+    const headArr = (x: unknown) =>
+      Array.isArray(x) ? (x as string[]).filter((v) => typeof v === "string") : [];
 
     return {
       ref: String(payload.ref ?? ""),
@@ -87,6 +99,9 @@ export function parsePushPayload(body: unknown): PushPayload | null {
                   }
                 : { name: "", email: "" },
             url: String(headCommit.url ?? ""),
+            added: headArr(headCommit.added),
+            modified: headArr(headCommit.modified),
+            removed: headArr(headCommit.removed),
           }
         : null,
     };
