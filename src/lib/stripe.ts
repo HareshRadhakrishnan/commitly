@@ -36,6 +36,8 @@ export async function createCheckoutSession(
       .eq("id", userId);
   }
 
+  if (!customerId) return null;
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",

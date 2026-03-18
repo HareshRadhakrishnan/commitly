@@ -1,8 +1,31 @@
 import type { PushCommit } from "@/lib/github/webhook";
+import type { BrandExample } from "@/lib/db/types";
 
 export type CommitWithContext = PushCommit & {
   diffText?: string;
 };
+
+type BrandExamplesByPlatform = {
+  linkedin: string[];
+  twitter: string[];
+  changelog: string[];
+};
+
+function groupExamplesByPlatform(examples: BrandExample[]): BrandExamplesByPlatform {
+  return examples.reduce<BrandExamplesByPlatform>(
+    (acc, ex) => {
+      acc[ex.platform].push(ex.content);
+      return acc;
+    },
+    { linkedin: [], twitter: [], changelog: [] }
+  );
+}
+
+function buildFewShotBlock(label: string, examples: string[]): string {
+  if (examples.length === 0) return "";
+  const formatted = examples.map((e, i) => `Example ${i + 1}:\n${e}`).join("\n\n");
+  return `\n\nBRAND VOICE EXAMPLES FOR ${label.toUpperCase()} (match this person's style, tone, and formatting):\n${formatted}`;
+}
 
 function formatCommitForPrompt(c: CommitWithContext): string {
   const header = `Commit ${c.id.slice(0, 7)}: ${c.message}`;
@@ -31,16 +54,28 @@ Answer with exactly one word: YES or NO`;
 
 export function buildGenerationPrompt(
   commits: PushCommit[],
-  brandVoice: string = "Professional"
+  brandVoice: string = "Professional",
+  brandExamples: BrandExample[] = []
 ): string {
   const commitList = commits
     .map((c) => `- ${c.message}`)
     .join("\n");
 
-  return `You are a product marketing writer. Based on these technical commits, create marketing content in a "${brandVoice}" voice.
+  const examples = groupExamplesByPlatform(brandExamples);
+  const linkedinExamples = buildFewShotBlock("linkedin", examples.linkedin);
+  const twitterExamples = buildFewShotBlock("twitter/x", examples.twitter);
+  const changelogExamples = buildFewShotBlock("changelog", examples.changelog);
+
+  const hasExamples = brandExamples.length > 0;
+  const voiceInstruction = hasExamples
+    ? "The user has provided example posts below — match their writing style, tone, vocabulary, and formatting exactly."
+    : `Write in a "${brandVoice}" voice.`;
+
+  return `You are a product marketing writer. Based on these technical commits, create marketing content.
+${voiceInstruction}
 
 COMMITS:
-${commitList}
+${commitList}${linkedinExamples}${twitterExamples}${changelogExamples}
 
 Generate a JSON object with exactly these three keys (no extra keys):
 - "changelog": A bullet-point changelog (3-5 bullets) focused on user benefits. Each bullet starts with "- ".

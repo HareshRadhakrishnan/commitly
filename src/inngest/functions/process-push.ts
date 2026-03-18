@@ -12,6 +12,7 @@ import { canCreateDraft } from "@/lib/subscription";
 import { checkSignificance, generateContent } from "@/lib/ai/generate";
 import { sendDraftNotificationEmail } from "@/lib/email/resend";
 import { fetchCommitDiff } from "@/lib/github/app";
+import { getBrandExamplesForUser } from "@/lib/db/brand-examples";
 
 type PushEventData = {
   repository: {
@@ -96,8 +97,12 @@ export const processPush = inngest.createFunction(
       return { skipped: true, reason: "draft limit reached for this month" };
     }
 
+    const brandExamples = await step.run("fetch-brand-examples", async () => {
+      return getBrandExamplesForUser(project.user_id);
+    });
+
     const content = await step.run("generate-content", async () => {
-      return generateContent(commits);
+      return generateContent(commits, undefined, brandExamples);
     });
 
     const draft = await step.run("create-draft", async () => {

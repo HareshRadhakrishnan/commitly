@@ -1,7 +1,7 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, LogOut, FileText } from "lucide-react";
+import { Sparkles, LogOut, FileText, Settings } from "lucide-react";
 import { getOrCreateUser } from "@/lib/db/users";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { AddProjectForm } from "./projects/AddProjectForm";
@@ -65,6 +65,13 @@ export default async function DashboardPage() {
               className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
             >
               Billing
+            </Link>
+            <Link
+              href="/dashboard/settings"
+              className="flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
             </Link>
             <span className="text-sm text-zinc-600 dark:text-zinc-400">
               {session.user.email ?? session.user.name}

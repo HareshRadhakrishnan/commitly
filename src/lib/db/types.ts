@@ -15,6 +15,14 @@ export type Project = {
   created_at: string;
 };
 
+export type BrandExample = {
+  id: string;
+  user_id: string;
+  content: string;
+  platform: "linkedin" | "twitter" | "changelog";
+  created_at: string;
+};
+
 export type ReleaseDraft = {
   id: string;
   project_id: string;

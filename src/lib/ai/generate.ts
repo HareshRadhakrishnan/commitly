@@ -3,6 +3,7 @@ import { openai } from "@ai-sdk/openai";
 import type { CommitWithContext } from "./prompts";
 import { buildSignificancePrompt, buildGenerationPrompt } from "./prompts";
 import type { PushCommit } from "@/lib/github/webhook";
+import type { BrandExample } from "@/lib/db/types";
 
 export async function checkSignificance(commits: CommitWithContext[]): Promise<boolean> {
   const { text } = await generateText({
@@ -17,11 +18,12 @@ export async function checkSignificance(commits: CommitWithContext[]): Promise<b
 
 export async function generateContent(
   commits: PushCommit[],
-  brandVoice?: string
+  brandVoice?: string,
+  brandExamples?: BrandExample[]
 ): Promise<{ changelog: string; linkedin: string; twitter: string[] }> {
   const { text } = await generateText({
     model: openai("gpt-4o-mini"),
-    prompt: buildGenerationPrompt(commits, brandVoice),
+    prompt: buildGenerationPrompt(commits, brandVoice, brandExamples),
     maxOutputTokens: 1500,
   });
 
