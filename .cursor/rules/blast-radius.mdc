@@ -1,0 +1,25 @@
+---
+description: High-risk coupling reminders - check before committing
+globs: **/*
+alwaysApply: true
+---
+
+# Blast Radius Reminders
+
+Before committing, check these high-risk couplings:
+
+1. **DB schema ↔ Types + Queries**: If you change `supabase/migrations/*.sql`, MUST also update `src/lib/db/types.ts` AND all `.select()` calls in `src/lib/db/*.ts` that reference those columns.
+
+2. **Stripe webhook ↔ User columns**: If you change `subscription_tier`, `stripe_customer_id`, or `stripe_subscription_id` in users table, MUST also update `src/app/api/stripe/webhook/route.ts` and `src/lib/stripe.ts`.
+
+3. **GitHub webhook ↔ Inngest function**: If you change the event shape in `src/app/api/webhooks/github/route.ts`, MUST also update `src/inngest/functions/process-push.ts` (they share `PushEventData` type).
+
+4. **AI prompt output ↔ JSON parsing**: If you change expected keys in `src/lib/ai/prompts.ts` (changelog, linkedin, twitter), MUST also update the JSON parsing in `src/lib/ai/generate.ts` and `src/lib/db/release-drafts.ts`.
+
+5. **Auth ID pattern**: The pattern `session.user.id ?? session.user.email` as `authId` is used in 10+ files. If auth ID format changes in `src/auth.ts`, MUST update all dashboard pages and actions.
+
+6. **Subscription tiers**: If you add/rename tiers in `src/lib/subscription.ts`, MUST also update `supabase/migrations/004_subscription_schema.sql` CHECK constraint AND `src/app/api/stripe/webhook/route.ts` tier assignment.
+
+7. **Brand example platforms**: If you add platforms beyond `linkedin`/`twitter`/`changelog`, MUST update CHECK constraint in `005_brand_examples.sql`, `src/lib/db/types.ts`, AND `src/lib/ai/prompts.ts` grouping logic.
+
+Full maps: `AGENTS.md` → Key Invariants, Common Mistakes

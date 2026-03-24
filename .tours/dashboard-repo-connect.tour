@@ -1,0 +1,67 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Dashboard Repo Connect",
+  "description": "How users connect GitHub repositories via the GitHub App installation flow",
+  "steps": [
+    {
+      "file": "src/app/dashboard/page.tsx",
+      "line": 10,
+      "title": "1. Dashboard Entry",
+      "description": "User lands on dashboard. The page fetches:\n- User's connected projects\n- GitHub installations (to know if they've installed the app)\n- Recent drafts\n\nIf no installation, show 'Connect GitHub' button."
+    },
+    {
+      "file": "src/app/dashboard/page.tsx",
+      "line": 157,
+      "title": "2. GitHub App Install Link",
+      "description": "If user hasn't installed the GitHub App, this link sends them to GitHub.\n\nURL: `https://github.com/apps/{GITHUB_APP_SLUG}/installations/new`\n\nAfter install, GitHub redirects to our callback URL."
+    },
+    {
+      "file": "src/app/dashboard/github/callback/page.tsx",
+      "line": 6,
+      "title": "3. Installation Callback",
+      "description": "GitHub redirects here with `installation_id` in query params.\n\nWe:\n1. Verify user is authenticated\n2. Store installation_id in `github_installations` table\n3. Redirect to dashboard with success message"
+    },
+    {
+      "file": "src/app/dashboard/page.tsx",
+      "line": 146,
+      "title": "4. RepoPicker Appears",
+      "description": "Once installation exists, the RepoPicker component is shown instead of the install link.\n\nPasses current connected projects so we can show Connect/Disconnect buttons."
+    },
+    {
+      "file": "src/app/dashboard/projects/RepoPicker.tsx",
+      "line": 24,
+      "title": "5. Repo List Component",
+      "description": "Client component that:\n1. Fetches repos from `/api/github/repos`\n2. Displays searchable list\n3. Shows Connect/Disconnect button per repo\n4. Handles pagination"
+    },
+    {
+      "file": "src/app/api/github/repos/route.ts",
+      "line": 7,
+      "title": "6. Repos API",
+      "description": "Lists repositories accessible via the user's GitHub App installation.\n\nUses `listInstallationRepos()` which:\n1. Gets installation token via GitHub App JWT\n2. Fetches repos from GitHub API\n3. Returns sorted by last updated"
+    },
+    {
+      "file": "src/lib/github/app.ts",
+      "line": 116,
+      "title": "7. GitHub API Call",
+      "description": "Fetches all repos for an installation.\n\nPagination handled automatically—fetches all pages in parallel, then sorts globally by updated_at."
+    },
+    {
+      "file": "src/app/dashboard/projects/RepoPicker.tsx",
+      "line": 65,
+      "title": "8. Connect Button Handler",
+      "description": "When user clicks Connect:\n1. Call `connectRepo()` server action\n2. Update local state optimistically\n3. Refresh router to update server data"
+    },
+    {
+      "file": "src/app/dashboard/actions.ts",
+      "line": 37,
+      "title": "9. connectRepo Server Action",
+      "description": "Server action that:\n1. Checks auth\n2. Verifies repo limit (subscription tier)\n3. Gets installation_id for the user\n4. Upserts project in `projects` table\n\nIf repo was previously disconnected, reactivates it."
+    },
+    {
+      "file": "src/app/dashboard/actions.ts",
+      "line": 91,
+      "title": "10. disconnectRepo Server Action",
+      "description": "Sets `is_active = false` on the project.\n\nDoesn't delete—preserves history and allows reconnection."
+    }
+  ]
+}

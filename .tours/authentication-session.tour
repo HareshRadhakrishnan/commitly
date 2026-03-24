@@ -1,0 +1,61 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Authentication & Session",
+  "description": "How users authenticate via credentials or OAuth, and how sessions are managed with NextAuth v5",
+  "steps": [
+    {
+      "file": "src/app/api/auth/[...nextauth]/route.ts",
+      "line": 1,
+      "title": "1. NextAuth Route Handler",
+      "description": "All auth requests go through this catch-all route. It exports handlers from the auth config.\n\nNextAuth v5 uses this pattern for App Router."
+    },
+    {
+      "file": "src/auth.ts",
+      "line": 8,
+      "title": "2. Auth Configuration",
+      "description": "Main NextAuth config. Defines:\n- Providers (Credentials, Google, GitHub)\n- Custom sign-in page (`/signin`)\n- JWT and session callbacks\n\nThis is imported throughout the app via `auth()` for session checks."
+    },
+    {
+      "file": "src/auth.ts",
+      "line": 10,
+      "title": "3. Credentials Provider",
+      "description": "Email/password authentication:\n1. User submits email + password\n2. `getCredentialUser()` fetches user by `auth_id = 'cred|{email}'`\n3. bcrypt compares password hash\n4. Returns user object if valid"
+    },
+    {
+      "file": "src/auth.ts",
+      "line": 35,
+      "title": "4. OAuth Providers",
+      "description": "Google and GitHub OAuth configured here.\n\nRequires env vars: `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`"
+    },
+    {
+      "file": "src/auth.ts",
+      "line": 60,
+      "title": "5. Sign-In Callback",
+      "description": "After successful auth (OAuth only—credentials handled separately), sync user to Supabase.\n\n`getOrCreateUser(user.id, user.email)` ensures a `users` row exists with `auth_id` set to the OAuth provider's ID."
+    },
+    {
+      "file": "src/lib/db/users.ts",
+      "line": 20,
+      "title": "6. User Sync (getOrCreateUser)",
+      "description": "Core pattern: given an auth_id and email, return existing user or create new one.\n\nOAuth users: `auth_id` = provider ID (e.g., `google|123456`)\nCredential users: `auth_id` = `cred|{email}`"
+    },
+    {
+      "file": "src/lib/db/users.ts",
+      "line": 41,
+      "title": "7. Credential User Creation",
+      "description": "For email/password signup:\n1. Hash password with bcrypt\n2. Create user with `auth_id = 'cred|{email}'`\n3. Store password_hash"
+    },
+    {
+      "file": "src/app/dashboard/page.tsx",
+      "line": 10,
+      "title": "8. Protected Page Pattern",
+      "description": "Every protected page follows this pattern:\n1. `const session = await auth()`\n2. If no session, `redirect('/signin')`\n3. Get auth_id: `session.user.id ?? session.user.email`\n4. Get DB user: `getOrCreateUser(authId, email)`\n\nNow you have the Supabase user for data queries."
+    },
+    {
+      "file": "src/types/next-auth.d.ts",
+      "line": 1,
+      "title": "9. Type Augmentation",
+      "description": "TypeScript types extended to include `id` on user/session objects.\n\nWithout this, `session.user.id` would be a type error."
+    }
+  ]
+}

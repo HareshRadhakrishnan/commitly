@@ -1,0 +1,91 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "GitHub Push to Draft",
+  "description": "End-to-end flow: GitHub push webhook → Inngest background job → AI generation → draft creation → email notification",
+  "steps": [
+    {
+      "file": "src/app/api/webhooks/github/route.ts",
+      "line": 7,
+      "title": "1. Webhook Entry Point",
+      "description": "GitHub sends a POST request here when code is pushed. This route must respond within 10 seconds (GitHub timeout), so we only do validation and dispatch.\n\nKey tasks:\n- Verify webhook signature using `verifyWebhookSignature()`\n- Parse the push payload\n- Dispatch `github/push` event to Inngest\n- Return immediately"
+    },
+    {
+      "file": "src/lib/github/webhook.ts",
+      "line": 6,
+      "title": "2. Signature Verification",
+      "description": "Security-critical: HMAC-SHA256 verification ensures the webhook came from GitHub, not an attacker.\n\nUses `GITHUB_WEBHOOK_SECRET` env var. If verification fails, we reject the request with 401."
+    },
+    {
+      "file": "src/app/api/webhooks/github/route.ts",
+      "line": 59,
+      "title": "3. Dispatch to Inngest",
+      "description": "The webhook dispatches a `github/push` event to Inngest with repository info and commits.\n\nThis returns immediately, allowing Inngest to process asynchronously. The webhook can respond to GitHub within the timeout."
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 29,
+      "title": "4. Background Job Starts",
+      "description": "Inngest picks up the `github/push` event and runs this function. It's broken into steps for reliability—if one step fails, Inngest can retry from that point.\n\nSteps: find-project → fetch-diffs → check-significance → get-user → check-usage-limit → fetch-brand-examples → generate-content → create-draft → send-email"
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 39,
+      "title": "5. Find Connected Project",
+      "description": "Look up the repository in our `projects` table. If no project is connected, skip processing.\n\nThis links the GitHub repo ID to our internal project (and user)."
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 47,
+      "title": "6. Fetch Commit Diffs",
+      "description": "For each commit, fetch the actual code diff from GitHub API. This gives the AI context beyond just commit messages.\n\nUses GitHub App installation token for authentication."
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 79,
+      "title": "7. Check Significance",
+      "description": "AI filter: determines if commits have user-facing value. Trivial changes (typos, refactors) are skipped.\n\nIf not significant, the job ends here—no draft created."
+    },
+    {
+      "file": "src/lib/ai/generate.ts",
+      "line": 8,
+      "title": "8. Significance Prompt",
+      "description": "The AI is prompted to answer YES or NO based on commit messages and diffs.\n\nUses `gpt-4o-mini` via Vercel AI SDK. Non-streaming (`generateText`) since we need the full answer."
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 91,
+      "title": "9. Check Usage Limits",
+      "description": "Enforce subscription limits before doing expensive AI generation.\n\nFree tier: 3 drafts/month. If limit reached, skip generation."
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 104,
+      "title": "10. Generate Content",
+      "description": "AI generates marketing content: changelog, LinkedIn post, Twitter thread.\n\nBrand examples (if user configured) are included as few-shot context."
+    },
+    {
+      "file": "src/lib/ai/generate.ts",
+      "line": 19,
+      "title": "11. Content Generation",
+      "description": "Prompt asks for JSON with specific keys. Response is parsed (fragile—model must output valid JSON).\n\nReturns: `{ changelog, linkedin, twitter }`"
+    },
+    {
+      "file": "src/lib/db/release-drafts.ts",
+      "line": 14,
+      "title": "12. Create Draft in DB",
+      "description": "Save the generated content to `release_drafts` table.\n\nStores: AI content, original commit info, project reference, status='pending'."
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 139,
+      "title": "13. Send Email Notification",
+      "description": "If user has email and hasn't received too many recent emails (rate limiting), send notification.\n\nEmail includes link to review the draft."
+    },
+    {
+      "file": "src/lib/email/resend.ts",
+      "line": 45,
+      "title": "14. Email Template",
+      "description": "Draft notification email with inline HTML template.\n\nIncludes 'Review your generated notes' CTA linking to `/dashboard/review/{draftId}`."
+    }
+  ]
+}

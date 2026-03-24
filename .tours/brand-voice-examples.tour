@@ -1,0 +1,67 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Brand Voice Examples",
+  "description": "How users configure brand voice with example posts, and how AI uses them for generation",
+  "steps": [
+    {
+      "file": "src/app/dashboard/settings/page.tsx",
+      "line": 9,
+      "title": "1. Settings Page",
+      "description": "Settings page where users configure their brand voice.\n\nFetches existing brand examples from DB and passes to the form component."
+    },
+    {
+      "file": "src/app/dashboard/settings/page.tsx",
+      "line": 17,
+      "title": "2. Fetch Existing Examples",
+      "description": "Load user's saved brand examples from `brand_examples` table.\n\nExamples are per-platform: linkedin, twitter, changelog."
+    },
+    {
+      "file": "src/app/dashboard/settings/BrandVoiceForm.tsx",
+      "line": 1,
+      "title": "3. Brand Voice Form",
+      "description": "Client component for managing examples:\n- Add new examples (paste text, select platform)\n- Delete existing examples\n- Shows current examples grouped by platform"
+    },
+    {
+      "file": "src/app/dashboard/settings/actions.ts",
+      "line": 16,
+      "title": "4. addBrandExample Action",
+      "description": "Server action to save a new example:\n1. Validate content (min 20 chars, max 3000)\n2. Check total limit (15 examples max)\n3. Insert into `brand_examples` table\n4. Revalidate the settings page"
+    },
+    {
+      "file": "src/lib/db/brand-examples.ts",
+      "line": 15,
+      "title": "5. Database Operations",
+      "description": "CRUD for brand_examples:\n- `createBrandExample()`: insert new\n- `deleteBrandExample()`: remove by ID\n- `getBrandExamplesForUser()`: fetch all for user"
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 100,
+      "title": "6. Fetch Examples at Generation Time",
+      "description": "When generating content, Inngest fetches the user's brand examples.\n\nThis happens BEFORE calling `generateContent()`, so examples are ready."
+    },
+    {
+      "file": "src/inngest/functions/process-push.ts",
+      "line": 104,
+      "title": "7. Pass to Generation",
+      "description": "Brand examples passed to `generateContent()` along with commits.\n\nThe AI will use these as few-shot context to match the user's style."
+    },
+    {
+      "file": "src/lib/ai/prompts.ts",
+      "line": 55,
+      "title": "8. Generation Prompt Builder",
+      "description": "Builds the AI prompt with:\n1. Instructions for each content type\n2. Brand voice examples grouped by platform\n3. Few-shot format: 'match this person's style, tone, vocabulary'"
+    },
+    {
+      "file": "src/lib/ai/prompts.ts",
+      "line": 14,
+      "title": "9. Group Examples by Platform",
+      "description": "Examples organized by platform (linkedin, twitter, changelog).\n\nEach platform's examples are formatted separately in the prompt."
+    },
+    {
+      "file": "src/lib/ai/prompts.ts",
+      "line": 24,
+      "title": "10. Few-Shot Block",
+      "description": "Formats examples as few-shot prompts:\n```\nBRAND VOICE EXAMPLES FOR LINKEDIN:\nExample 1:\n[user's example post]\n\nExample 2:\n[another example]\n```\n\nAI is instructed to match style, tone, and formatting."
+    }
+  ]
+}

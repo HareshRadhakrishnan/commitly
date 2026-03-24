@@ -1,0 +1,73 @@
+{
+  "$schema": "https://aka.ms/codetour-schema",
+  "title": "Stripe Subscription",
+  "description": "User upgrades to paid tier via Stripe Checkout, webhook updates user tier",
+  "steps": [
+    {
+      "file": "src/app/dashboard/billing/page.tsx",
+      "line": 1,
+      "title": "1. Billing Page",
+      "description": "Shows current subscription status and Upgrade/Manage buttons.\n\nFetches user's `subscription_tier` to display appropriate UI."
+    },
+    {
+      "file": "src/app/dashboard/billing/UpgradeButton.tsx",
+      "line": 1,
+      "title": "2. Upgrade Button",
+      "description": "Client component that triggers checkout when clicked.\n\nCalls POST to `/api/stripe/checkout` and redirects to Stripe's hosted checkout page."
+    },
+    {
+      "file": "src/app/api/stripe/checkout/route.ts",
+      "line": 8,
+      "title": "3. Checkout API",
+      "description": "Creates a Stripe Checkout Session:\n1. Get authenticated user\n2. Create or retrieve Stripe customer\n3. Create session with price_id and user metadata\n4. Return checkout URL"
+    },
+    {
+      "file": "src/lib/stripe.ts",
+      "line": 9,
+      "title": "4. createCheckoutSession",
+      "description": "Core Stripe logic:\n1. Check if user has stripe_customer_id\n2. If not, create Stripe customer and store ID\n3. Create checkout session with:\n   - `user_id` in session.metadata\n   - `user_id` in subscription_data.metadata (important for webhooks!)\n   - Success/cancel URLs"
+    },
+    {
+      "file": "src/lib/stripe.ts",
+      "line": 41,
+      "title": "5. Checkout Session Details",
+      "description": "Key configuration:\n- `mode: 'subscription'` for recurring billing\n- `metadata: { user_id }` on both session AND subscription_data\n\nThe webhook uses this metadata to identify which user to update."
+    },
+    {
+      "file": "src/app/api/stripe/webhook/route.ts",
+      "line": 7,
+      "title": "6. Webhook Entry",
+      "description": "Stripe sends events here. Must:\n1. Verify signature with `STRIPE_WEBHOOK_SECRET`\n2. Parse event\n3. Handle relevant event types"
+    },
+    {
+      "file": "src/app/api/stripe/webhook/route.ts",
+      "line": 33,
+      "title": "7. Subscription Events",
+      "description": "Handle `customer.subscription.created/updated`:\n1. Get user_id from subscription metadata\n2. Determine tier (active = 'founder', else 'free')\n3. Update `users.subscription_tier` and `stripe_subscription_id`"
+    },
+    {
+      "file": "src/app/api/stripe/webhook/route.ts",
+      "line": 50,
+      "title": "8. Subscription Deleted",
+      "description": "When subscription is cancelled:\n1. Get user_id from metadata\n2. Set `subscription_tier = 'free'`\n3. Clear `stripe_subscription_id`"
+    },
+    {
+      "file": "src/app/api/stripe/webhook/route.ts",
+      "line": 64,
+      "title": "9. Checkout Completed",
+      "description": "Fallback: if subscription events didn't fire yet, handle checkout completion.\n\nRetrieves subscription and updates user to 'founder' tier."
+    },
+    {
+      "file": "src/lib/subscription.ts",
+      "line": 3,
+      "title": "10. Tier Limits",
+      "description": "Subscription tier enforced via helper functions:\n- `canCreateDraft()`: check draft limit\n- `canConnectRepo()`: check repo limit\n\nFree: 1 repo, 3 drafts/month\nFounder/Team: unlimited"
+    },
+    {
+      "file": "src/app/dashboard/billing/ManageBillingButton.tsx",
+      "line": 1,
+      "title": "11. Customer Portal",
+      "description": "For existing subscribers: button links to Stripe Customer Portal.\n\nAllows self-service: update payment method, cancel subscription."
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+---
+description: Global project conventions and patterns
+globs: **/*
+alwaysApply: true
+---
+
+# Commitly Conventions
+
+## Tech Stack
+- **Framework**: Next.js 16 (App Router, React 19)
+- **Database**: Supabase (PostgreSQL)
+- **Auth**: NextAuth v5 (Credentials, Google, GitHub)
+- **AI**: Vercel AI SDK + OpenAI (gpt-4o-mini)
+- **Background Jobs**: Inngest
+- **Payments**: Stripe
+- **Email**: Resend
+- **Styling**: Tailwind CSS 4, Lucide icons
+
+## Naming
+- **Page files**: `page.tsx` in route folder (`src/app/dashboard/page.tsx`)
+- **API routes**: `route.ts` with HTTP exports (`src/app/api/stripe/webhook/route.ts`)
+- **Server actions**: `actions.ts` in feature folder (`src/app/dashboard/actions.ts`)
+- **Components**: PascalCase (`RepoPicker.tsx`, `BrandVoiceForm.tsx`)
+- **Lib modules**: camelCase (`release-drafts.ts`, `users.ts`)
+- **DB tables**: snake_case plural (`users`, `release_drafts`)
+- **Env vars**: SCREAMING_SNAKE_CASE (`STRIPE_SECRET_KEY`)
+
+## Backend Patterns
+- **DB access**: Always use `supabaseAdmin` from `lib/supabase/server.ts`
+- **Auth check**: Call `auth()` + check `session?.user` at start of protected routes
+- **User lookup**: Use `getOrCreateUser(authId, email)` to get DB user from session
+- **Long tasks**: Send to Inngest via `inngest.send()`, never block API routes
+- **Subscription checks**: Use `canCreateDraft()` / `canConnectRepo()` from `lib/subscription.ts`
+
+## Frontend Patterns
+- **Protected pages**: Async server components with `auth()` check, `redirect("/signin")` if null
+- **Forms**: Client components with server actions, use `revalidatePath()` after mutations
+- **Icons**: Import from `lucide-react`
+
+## Package Manager
+Use `npm` (see `package-lock.json`).
+
+## Doc Navigation Guide
+
+| You need… | Go to… |
+|-----------|--------|
+| HOW something works | `instructions.md`, `instructionsV2.md` |
+| WHY a decision was made | `docs/decisions/README.md` |
+| DO a task correctly | `AGENTS.md` → Task Router |
+| COPY a pattern | `docs/canonical-examples.md` |
+| VERIFY a change | `docs/verification.md` |
+| REVIEW a PR | `docs/review-protocol.md` |
+| LEARN a flow | `.tours/README.md` |
+| Database schema | `supabase/migrations/*.sql` |
+| Stripe setup | `docs/STRIPE_SETUP.md` |
+| Supabase setup | `supabase/README.md` |
