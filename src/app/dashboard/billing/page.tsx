@@ -91,7 +91,7 @@ export default async function BillingPage() {
               Upgrade to Founder
             </h2>
             <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
-              $19/month — Unlimited repos, unlimited drafts, Brand Voice, and Direct Publishing (coming soon).
+              $19/month — Unlimited repos, unlimited drafts, and Brand Voice.
             </p>
             <UpgradeButton />
           </section>

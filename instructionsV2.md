@@ -13,7 +13,7 @@ Version 2 transforms Commitly from MVP to a production-ready product with **zero
 | **2a** | Automated Repository Discovery | Medium | High – removes manual Repo ID friction |
 | **2b** | Subscription & Usage Limits | Medium | High – enables monetization |
 | **2c** | Custom Brand Personas | Low | Medium – differentiator for Pro |
-| **2d** | Direct Social Publishing | High | High – key Pro feature |
+| **2d** | Direct Social Publishing | High | *Deferred* – copy/paste workflow retained |
 
 ---
 
@@ -94,20 +94,16 @@ Table BrandExamples {
 
 ---
 
-### 3.4. Direct Social Publishing (Phase 2d)
+### 3.4. Direct Social Publishing (Phase 2d) — *Deferred*
 
-**Feature:** "Post to LinkedIn" and "Tweet" buttons that publish directly instead of copy.
+**Status:** Skipped for V2. Copy/paste remains the primary workflow.
 
-**Flow:**
-1. User connects LinkedIn/X in Settings (OAuth)
-2. On review page: "Post to LinkedIn" / "Tweet" buttons
-3. On click: call platform API with stored token
+**Planned feature (future):** "Post to LinkedIn" and "Tweet" buttons that publish directly instead of copy.
 
-**Technical notes:**
-- **LinkedIn:** OAuth 2.0; use Share API (UGC) or Marketing API. Requires app in LinkedIn Developer Portal.
+**When revisiting:**
+- **LinkedIn:** OAuth 2.0; Share API (UGC). Requires app in LinkedIn Developer Portal.
 - **X (Twitter):** OAuth 2.0 with PKCE; X API v2 `POST /2/tweets`. Requires Developer Account.
-- **Token storage:** Encrypt `access_token` and `refresh_token` at rest. Use `refresh_token` before expiry.
-- **Security:** Never expose tokens to client; all API calls server-side.
+- **Token storage:** Encrypt `access_token` and `refresh_token` at rest. All API calls server-side.
 
 ---
 
@@ -156,6 +152,7 @@ ALTER TABLE release_drafts ADD COLUMN engagement_data jsonb DEFAULT '{}';
 
 ## 5. Out of Scope (V2) / Future
 
+- **Direct Social Publishing (Phase 2d):** LinkedIn/X OAuth and one-click posting. Deferred; copy/paste workflow retained.
 - **Team members (5 seats):** Requires invite flow, role management, org model. Defer to v3.
 - **Weekly Newsletter Generator:** Needs separate spec (content format, delivery).
 - **Custom AI Model Fine-tuning:** High complexity; consider "custom model" as a v3+ enterprise feature.
@@ -167,4 +164,4 @@ ALTER TABLE release_drafts ADD COLUMN engagement_data jsonb DEFAULT '{}';
 
 - **Onboarding:** 80% of new users connect a repo within 3 minutes.
 - **Conversion:** 5% Free → Paid within 30 days.
-- **Retention:** Direct publishing users have 2x higher 30-day retention.
+- **Retention:** Paid users have 2x higher 30-day retention.
