@@ -1,4 +1,4 @@
-# Commitly — AI-Optimized Codebase Guide
+# Commitly AI — AI-Optimized Codebase Guide
 
 Concise, structured reference for AI assistants working in this codebase. Every line earns its token cost.
 
@@ -53,6 +53,13 @@ commitly/
 │   │   │   └── server.ts             # Server-side admin client
 │   │   ├── stripe.ts                 # Stripe checkout/portal helpers
 │   │   └── subscription.ts           # Tier limits logic
+│   ├── components/
+│   │   ├── dashboard/
+│   │   │   ├── dashboard-shell.tsx   # Client shell: sidebar + top bar + Cmd+K + Sheet
+│   │   │   └── actions.ts            # signOutAction (server action for shell)
+│   │   ├── ui/                       # shadcn/ui primitives (button, card, command, sheet, …)
+│   │   ├── auth-card.tsx             # Shared auth page layout wrapper
+│   │   └── theme-provider.tsx        # next-themes ThemeProvider wrapper
 │   ├── types/
 │   │   └── next-auth.d.ts            # NextAuth type augmentation
 │   └── auth.ts                       # NextAuth config (providers, callbacks)
@@ -66,6 +73,7 @@ commitly/
 │   └── README.md                     # Supabase setup instructions
 ├── docs/
 │   └── STRIPE_SETUP.md               # Stripe configuration guide
+├── .cursor/plans/Ui-design-spec.md   # UI/UX visual north star (colors, layout, components)
 ├── instructions.md                   # PRD v1 (MVP spec)
 ├── instructionsV2.md                 # PRD v2 (production features)
 └── package.json
@@ -93,6 +101,10 @@ commitly/
 | Task | Start Files | Notes |
 |------|-------------|-------|
 | Add a new page | `src/app/{route}/page.tsx` | Use async server components; auth via `auth()` |
+| Add a new dashboard page | `src/app/dashboard/{route}/page.tsx` | No header needed — `dashboard/layout.tsx` wraps all children in `DashboardShell` |
+| Modify dashboard chrome | `src/components/dashboard/dashboard-shell.tsx` | Sidebar, top bar, Cmd+K, theme toggle, sign out |
+| Add UI component | `src/components/ui/{name}.tsx` | Follow shadcn pattern; match existing Tailwind v4 style |
+| Follow UI/UX spec | `.cursor/plans/Ui-design-spec.md` | Colors (`--brand`, `--primary`), radius, layout, dark mode |
 | Add a new API endpoint | `src/app/api/{route}/route.ts` | Export `GET`, `POST`, etc. Use `NextResponse` |
 | Add a new server action | `src/app/{feature}/actions.ts` | Add `"use server"` at top; call from client forms |
 | Add a new background job | `src/inngest/functions/{name}.ts` | Create function with `inngest.createFunction()`, register in `api/inngest/route.ts` |
@@ -116,6 +128,9 @@ commitly/
 5. **All subscription checks use `canCreateDraft()` / `canConnectRepo()`** from `lib/subscription.ts`. Never hardcode limits.
 6. **Stripe user_id is stored in metadata** on both checkout session and subscription. Webhook uses this to update DB.
 7. **GitHub webhook must respond in <10 seconds**. Always dispatch to Inngest immediately.
+8. **UI token semantics**: `--brand` / `text-brand` = violet accent (links, active icon, highlights). `--primary` = solid black CTA buttons. Never use `text-primary` for inline links — use `text-brand`.
+9. **Dashboard chrome is in the layout**. `/dashboard/*` pages must NOT render their own `<header>` or outer `min-h-screen` wrapper — the `DashboardShell` in `dashboard/layout.tsx` provides these.
+10. **Server actions in client components**: place in a co-located `actions.ts` file with `"use server"` — do not inline `"use server"` inside client component function bodies.
 
 ---
 
@@ -133,6 +148,8 @@ commitly/
 | Skip webhook signature verification | Always verify via `verifyWebhookSignature()` (GitHub) or `stripe.webhooks.constructEvent()` | Prevents spoofed requests |
 | Forget `revalidatePath()` after mutations | Call `revalidatePath('/dashboard/...')` in server actions | Updates cached server components |
 | Use Supabase RLS for auth | Auth is in application code via NextAuth session | RLS is disabled in this codebase |
+| Add a header/nav inside a dashboard page | The `DashboardShell` in `dashboard/layout.tsx` already provides chrome | Adding per-page headers creates duplicate chrome and visual inconsistency |
+| Use `text-primary` for links or accents | Use `text-brand` for violet accents; `text-primary` is black (primary button color) | Semantic mismatch breaks theming |
 
 ---
 

@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { requestPasswordReset } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -27,11 +31,13 @@ export function ForgotPasswordForm() {
   if (submitted) {
     return (
       <div className="flex flex-col gap-4 text-center">
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-950/50 dark:text-green-400">
-          If an account exists with that email, we&apos;ve sent password reset
-          instructions.
-        </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <Alert className="border-emerald-500/30 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-50">
+          <AlertDescription>
+            If an account exists with that email, we&apos;ve sent password reset
+            instructions.
+          </AlertDescription>
+        </Alert>
+        <p className="text-sm text-muted-foreground">
           Check your email and follow the link to reset your password.
         </p>
       </div>
@@ -40,33 +46,26 @@ export function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div>
-        <label
-          htmlFor="email"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
-          Email
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="h-10"
           placeholder="you@example.com"
         />
       </div>
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-lg bg-amber-500 px-4 py-3 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
-      >
+      <Button type="submit" disabled={loading} className="h-10 w-full">
         {loading ? "Sending…" : "Send reset link"}
-      </button>
+      </Button>
     </form>
   );
 }

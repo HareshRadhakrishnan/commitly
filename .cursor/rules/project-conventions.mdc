@@ -4,7 +4,7 @@ globs: **/*
 alwaysApply: true
 ---
 
-# Commitly Conventions
+# Commitly AI Conventions
 
 ## Tech Stack
 - **Framework**: Next.js 16 (App Router, React 19)
@@ -35,7 +35,13 @@ alwaysApply: true
 ## Frontend Patterns
 - **Protected pages**: Async server components with `auth()` check, `redirect("/signin")` if null
 - **Forms**: Client components with server actions, use `revalidatePath()` after mutations
-- **Icons**: Import from `lucide-react`
+- **Icons**: Import from `lucide-react`, use `strokeWidth={1.5}` in sidebar/chrome
+- **UI/UX spec**: `.cursor/plans/Ui-design-spec.md` is the visual north star (colors, tokens, layout)
+- **Theme**: `next-themes` ThemeProvider in root layout; class-based dark mode
+- **App shell**: `src/components/dashboard/dashboard-shell.tsx` — shared sidebar + top bar for all `/dashboard/*` routes
+- **Server actions for client components**: Place in co-located `actions.ts` with `"use server"` — never inline in client component files
+- **Accent/brand color**: Use `text-brand` / `bg-brand` for violet accents; `bg-primary` / `text-primary-foreground` for black CTAs
+- **Border radius**: Prefer `rounded-xl` / `rounded-2xl` for cards, inputs, buttons per spec
 
 ## Package Manager
 Use `npm` (see `package-lock.json`).
@@ -54,3 +60,4 @@ Use `npm` (see `package-lock.json`).
 | Database schema | `supabase/migrations/*.sql` |
 | Stripe setup | `docs/STRIPE_SETUP.md` |
 | Supabase setup | `supabase/README.md` |
+| UI/UX design spec | `.cursor/plans/Ui-design-spec.md` |

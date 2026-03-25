@@ -4,6 +4,10 @@ import { useState, useTransition } from "react";
 import { Trash2, Plus, Loader2 } from "lucide-react";
 import { addBrandExample, removeBrandExample } from "./actions";
 import type { BrandExample } from "@/lib/db/types";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const PLATFORMS: { value: BrandExample["platform"]; label: string; description: string }[] = [
   {
@@ -34,8 +38,6 @@ export function BrandVoiceForm({ initialExamples }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const platformExamples = examples.filter((e) => e.platform === activePlatform);
-
   function handleAdd() {
     setError(null);
     startTransition(async () => {
@@ -44,7 +46,6 @@ export function BrandVoiceForm({ initialExamples }: Props) {
         setError(result.error);
         return;
       }
-      // Optimistically add a placeholder; page revalidation will sync real data
       setExamples((prev) => [
         ...prev,
         {
@@ -67,88 +68,97 @@ export function BrandVoiceForm({ initialExamples }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Platform tabs */}
-      <div className="flex gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+    <Tabs
+      value={activePlatform}
+      onValueChange={(v) => {
+        setActivePlatform(v as BrandExample["platform"]);
+        setDraft("");
+        setError(null);
+      }}
+      className="gap-6"
+    >
+      <TabsList className="grid w-full grid-cols-3">
         {PLATFORMS.map((p) => (
-          <button
-            key={p.value}
-            onClick={() => setActivePlatform(p.value)}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition ${
-              activePlatform === p.value
-                ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50"
-                : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-            }`}
-          >
+          <TabsTrigger key={p.value} value={p.value}>
             {p.label}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
 
-      {/* Description */}
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        {PLATFORMS.find((p) => p.value === activePlatform)?.description}{" "}
-        Add up to 5 examples — the AI will clone your style when generating content.
-      </p>
+      {PLATFORMS.map((p) => {
+        const forPlatform = examples.filter((e) => e.platform === p.value);
+        return (
+          <TabsContent key={p.value} value={p.value} className="mt-0 space-y-6">
+            <p className="text-sm text-muted-foreground">
+              {p.description} Add up to 5 examples — the AI will clone your style when
+              generating content.
+            </p>
 
-      {/* Existing examples */}
-      {platformExamples.length > 0 && (
-        <ul className="space-y-3">
-          {platformExamples.map((ex, i) => (
-            <li
-              key={ex.id}
-              className="group flex items-start gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <span className="mt-0.5 text-xs font-semibold text-zinc-400">#{i + 1}</span>
-              <p className="flex-1 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
-                {ex.content}
-              </p>
-              <button
-                onClick={() => handleRemove(ex.id)}
-                disabled={isPending}
-                className="mt-0.5 shrink-0 text-zinc-300 transition hover:text-red-500 disabled:opacity-50 dark:text-zinc-600 dark:hover:text-red-400"
-                aria-label="Remove example"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* Add new example */}
-      {platformExamples.length < 5 && (
-        <div className="space-y-2">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={`Paste a ${PLATFORMS.find((p) => p.value === activePlatform)?.label} example here…`}
-            rows={5}
-            className="w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-          />
-          {error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          )}
-          <button
-            onClick={handleAdd}
-            disabled={isPending || !draft.trim()}
-            className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-600 disabled:opacity-50"
-          >
-            {isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
+            {forPlatform.length > 0 && (
+              <ul className="space-y-3">
+                {forPlatform.map((ex, i) => (
+                  <li
+                    key={ex.id}
+                    className="group flex items-start gap-3 rounded-lg border bg-card p-3"
+                  >
+                    <span className="mt-0.5 text-xs font-semibold text-muted-foreground">
+                      #{i + 1}
+                    </span>
+                    <p className="flex-1 whitespace-pre-wrap text-sm text-foreground">
+                      {ex.content}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleRemove(ex.id)}
+                      disabled={isPending}
+                      className="mt-0.5 shrink-0 text-muted-foreground hover:text-destructive"
+                      aria-label="Remove example"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
             )}
-            Add example
-          </button>
-        </div>
-      )}
 
-      {platformExamples.length >= 5 && (
-        <p className="text-sm text-zinc-500">
-          You&apos;ve added the maximum of 5 examples for this platform.
-        </p>
-      )}
-    </div>
+            {forPlatform.length < 5 ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={`Paste a ${p.label} example here…`}
+                  rows={5}
+                  className="min-h-[120px] resize-y"
+                />
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={isPending || !draft.trim()}
+                  className="gap-2"
+                >
+                  {isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plus className="size-4" />
+                  )}
+                  Add example
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                You&apos;ve added the maximum of 5 examples for this platform.
+              </p>
+            )}
+          </TabsContent>
+        );
+      })}
+    </Tabs>
   );
 }

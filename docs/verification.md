@@ -1,6 +1,6 @@
 # Verification Guide
 
-How to verify changes in Commitly before committing or merging.
+How to verify changes in Commitly AI before committing or merging.
 
 ---
 
@@ -41,6 +41,18 @@ How to verify changes in Commitly before committing or merging.
 | Repo connect | Dashboard → Connect GitHub → Select repo → Verify `projects` row |
 | Push → Draft | Push to connected repo → Inngest run completes → `release_drafts` row created |
 | Billing | Dashboard → Billing → Upgrade → Complete checkout → `users.subscription_tier` = `founder` |
+
+### UI / Shell
+
+| Check | Steps |
+|-------|-------|
+| Sidebar renders | Open `/dashboard` — left rail with logo, nav, user footer must appear on `≥768px` |
+| Mobile nav | Narrow to `<768px` — sidebar hidden; hamburger opens Sheet |
+| Cmd+K palette | Press `⌘K` / `Ctrl+K` — command dialog opens with navigate / toggle-theme / sign-out |
+| Theme toggle | Click sun/moon icon in top bar, or use Cmd+K → "Toggle theme" |
+| Dark mode | All surfaces switch correctly; sidebar uses dark rail tokens |
+| No per-page chrome | Dashboard, Settings, Billing, Review pages should NOT render their own `<header>` |
+| Brand links | Inline links (`Sign up`, `Sign in`, `Upgrade`) use violet (`text-brand`), not black |
 
 ---
 

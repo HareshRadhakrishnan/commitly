@@ -2,11 +2,11 @@ This **Product Requirements Document (PRD)** is designed for a solo developer to
 
 ---
 
-# PRD: "Commitly" – The AI Product Marketing Agent
+# PRD: "Commitly AI" – The AI Product Marketing Agent
 
 ## 1. Executive Summary
 
-**Commitly** is an AI-powered B2B agent that bridges the gap between technical development and marketing. It monitors GitHub commits, identifies "value-add" updates, and automatically drafts release notes and social media content for developers and founders to review and publish.
+**Commitly AI** is an AI-powered B2B agent that bridges the gap between technical development and marketing. It monitors GitHub commits, identifies "value-add" updates, and automatically drafts release notes and social media content for developers and founders to review and publish.
 
 ## 2. Target Audience
 
@@ -22,6 +22,7 @@ This **Product Requirements Document (PRD)** is designed for a solo developer to
 * **AI Orchestration:** Vercel AI SDK (with Claude 3.5 Sonnet or GPT-4o).
 * **Worker/Queue:** Inngest (for background webhook processing).
 * **Email:** Resend.
+* **Styling:** Tailwind CSS 4 with semantic CSS tokens (`--brand` violet, black `--primary` CTAs, cool-gray surfaces). See `.cursor/plans/Ui-design-spec.md` for the full visual spec.
 
 ---
 

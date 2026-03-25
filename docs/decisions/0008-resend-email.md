@@ -6,7 +6,7 @@ Accepted (retroactive)
 
 ## Context
 
-Commitly sends transactional emails:
+Commitly AI sends transactional emails:
 - Password reset links
 - Draft notification ("We detected a significant update!")
 

@@ -3,13 +3,13 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM =
-  process.env.RESEND_FROM ?? "Commitly <onboarding@resend.dev>";
+  process.env.RESEND_FROM ?? "Commitly AI <onboarding@resend.dev>";
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
   const { data, error } = await resend.emails.send({
     from: FROM,
     to: [to],
-    subject: "Reset your Commitly password",
+    subject: "Reset your Commitly AI password",
     html: `
 <!DOCTYPE html>
 <html>
@@ -19,7 +19,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; max-width: 560px; margin: 0 auto; padding: 24px;">
   <div style="margin-bottom: 24px;">
-    <span style="font-size: 24px; font-weight: 700; color: #f59e0b;">Commitly</span>
+    <span style="font-size: 24px; font-weight: 700; color: #f59e0b;">Commitly AI</span>
   </div>
   <h1 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0 0 16px;">
     Reset your password
@@ -60,7 +60,7 @@ export async function sendDraftNotificationEmail(
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; max-width: 560px; margin: 0 auto; padding: 24px;">
   <div style="margin-bottom: 24px;">
-    <span style="font-size: 24px; font-weight: 700; color: #f59e0b;">Commitly</span>
+    <span style="font-size: 24px; font-weight: 700; color: #f59e0b;">Commitly AI</span>
   </div>
   <h1 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0 0 16px;">
     We detected a significant update!

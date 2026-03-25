@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { connectRepo, disconnectRepo } from "../actions";
 import { Search, Link2, Unlink, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 type Repo = {
   id: number;
@@ -101,27 +105,28 @@ export function RepoPicker({
   return (
     <div className="space-y-4">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-        <input
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
           type="text"
           placeholder="Search repositories…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 py-2 pl-10 pr-4 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="h-9 pl-9"
         />
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 py-12 text-zinc-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading repositories…
+        <div className="space-y-2 rounded-lg border p-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
         </div>
       ) : filteredRepos.length === 0 ? (
-        <p className="py-8 text-center text-sm text-zinc-500">
+        <p className="py-8 text-center text-sm text-muted-foreground">
           No repositories found
         </p>
       ) : (
-        <ul className="max-h-80 space-y-2 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <ul className="max-h-80 space-y-0 overflow-y-auto rounded-lg border">
           {filteredRepos.map((repo) => {
             const connected = isConnected(repo.id);
             const busy = actionLoading === repo.id;
@@ -129,52 +134,47 @@ export function RepoPicker({
             return (
               <li
                 key={repo.id}
-                className="flex items-center justify-between gap-4 border-b border-zinc-100 px-4 py-3 last:border-0 dark:border-zinc-800"
+                className="flex items-center justify-between gap-4 border-b px-4 py-3 last:border-0"
               >
                 <div className="min-w-0 flex-1">
                   <a
                     href={repo.html_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-zinc-900 hover:underline dark:text-zinc-50"
+                    className="font-medium text-foreground hover:underline"
                   >
                     {repo.full_name}
                   </a>
                   {repo.description && (
-                    <p className="mt-0.5 truncate text-xs text-zinc-500">
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
                       {repo.description}
                     </p>
                   )}
                 </div>
-                <button
+                <Button
                   type="button"
+                  size="sm"
+                  variant={connected ? "secondary" : "default"}
                   onClick={() =>
                     connected ? handleDisconnect(repo) : handleConnect(repo)
                   }
                   disabled={busy}
-                  className={`
-                    flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium
-                    ${
-                      connected
-                        ? "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                        : "bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50"
-                    }
-                  `}
+                  className={cn("shrink-0 gap-2")}
                 >
                   {busy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                   ) : connected ? (
                     <>
-                      <Unlink className="h-4 w-4" />
+                      <Unlink className="size-4" />
                       Disconnect
                     </>
                   ) : (
                     <>
-                      <Link2 className="h-4 w-4" />
+                      <Link2 className="size-4" />
                       Connect
                     </>
                   )}
-                </button>
+                </Button>
               </li>
             );
           })}
@@ -182,26 +182,28 @@ export function RepoPicker({
       )}
 
       {totalCount > 30 && (
-        <div className="flex justify-between gap-2">
-          <button
+        <div className="flex items-center justify-between gap-2">
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="rounded px-3 py-1.5 text-sm text-zinc-600 disabled:opacity-50 dark:text-zinc-400"
           >
             Previous
-          </button>
-          <span className="text-sm text-zinc-500">
+          </Button>
+          <span className="text-sm text-muted-foreground">
             Page {page} of {Math.ceil(totalCount / 30)}
           </span>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setPage((p) => p + 1)}
             disabled={page >= Math.ceil(totalCount / 30)}
-            className="rounded px-3 py-1.5 text-sm text-zinc-600 disabled:opacity-50 dark:text-zinc-400"
           >
             Next
-          </button>
+          </Button>
         </div>
       )}
     </div>

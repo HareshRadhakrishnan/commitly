@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { resetPassword } from "../forgot-password/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
@@ -44,10 +48,10 @@ export function ResetPasswordForm({ token }: { token: string }) {
   if (success) {
     return (
       <div className="flex flex-col gap-4 text-center">
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-950/50 dark:text-green-400">
-          Password reset successfully!
-        </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <Alert className="border-emerald-500/30 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-50">
+          <AlertDescription>Password reset successfully!</AlertDescription>
+        </Alert>
+        <p className="text-sm text-muted-foreground">
           Redirecting you to sign in…
         </p>
       </div>
@@ -56,50 +60,38 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div>
-        <label
-          htmlFor="password"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
-          New password
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="password">New password</Label>
+        <Input
           id="password"
           type="password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="h-10"
           placeholder="At least 8 characters"
         />
       </div>
-      <div>
-        <label
-          htmlFor="confirmPassword"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
-          Confirm new password
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">Confirm new password</Label>
+        <Input
           id="confirmPassword"
           type="password"
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="h-10"
           placeholder="Confirm your password"
         />
       </div>
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-lg bg-amber-500 px-4 py-3 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
-      >
+      <Button type="submit" disabled={loading} className="h-10 w-full">
         {loading ? "Resetting…" : "Reset password"}
-      </button>
+      </Button>
     </form>
   );
 }

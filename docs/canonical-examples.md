@@ -13,7 +13,7 @@
 
 | Pattern | Canonical File | Why This One |
 |---------|----------------|--------------|
-| Protected Page | `src/app/dashboard/settings/page.tsx` | Clean auth check, user lookup, data fetch |
+| Protected Page | `src/app/dashboard/settings/page.tsx` | Auth check + user lookup + data fetch; no own header (shell provides chrome) |
 | API Route (authenticated) | `src/app/api/github/repos/route.ts` | Auth + user lookup + error handling |
 | API Route (webhook) | `src/app/api/webhooks/github/route.ts` | Signature verification + Inngest dispatch |
 | Server Action | `src/app/dashboard/settings/actions.ts` | Validation + auth + DB mutation + revalidate |
@@ -28,7 +28,7 @@
 
 ### 1. Protected Page (Server Component)
 
-The canonical example is `src/app/dashboard/settings/page.tsx`. It shows the standard auth check, user lookup, and data fetching pattern.
+The canonical example is `src/app/dashboard/settings/page.tsx`. It shows the standard auth check, user lookup, and data fetching pattern. Note that **dashboard pages do not render their own header** — `src/app/dashboard/layout.tsx` wraps all children in `DashboardShell`, which provides the sidebar, top bar, and mobile Sheet.
 
 **Skeleton:**
 
@@ -355,7 +355,7 @@ export async function sendMyEmail(to: string, actionUrl: string) {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; max-width: 560px; margin: 0 auto; padding: 24px;">
   <div style="margin-bottom: 24px;">
-    <span style="font-size: 24px; font-weight: 700; color: #f59e0b;">Commitly</span>
+    <span style="font-size: 24px; font-weight: 700; color: #f59e0b;">Commitly AI</span>
   </div>
   <h1 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0 0 16px;">
     Your Heading

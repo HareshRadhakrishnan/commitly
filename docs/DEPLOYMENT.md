@@ -1,4 +1,4 @@
-# Commitly Deployment Guide
+# Commitly AI Deployment Guide
 
 ## Deploy to Vercel
 
@@ -24,7 +24,7 @@ Set these in Vercel → Project → Settings → Environment Variables:
 | `GITHUB_WEBHOOK_SECRET` | Yes | Webhook secret from GitHub App |
 | `OPENAI_API_KEY` | Yes | OpenAI API key |
 | `RESEND_API_KEY` | Yes | Resend API key |
-| `RESEND_FROM` | No | Sender email (e.g. `Commitly <notifications@yourdomain.com>`) |
+| `RESEND_FROM` | No | Sender email (e.g. `Commitly AI <notifications@yourdomain.com>`) |
 | `NEXT_PUBLIC_APP_URL` | Yes | Your deployed URL (e.g. `https://your-app.vercel.app`) |
 | `AUTH_TRUST_HOST` | Yes | Set to `true` for Vercel |
 

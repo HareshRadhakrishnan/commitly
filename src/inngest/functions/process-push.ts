@@ -41,7 +41,7 @@ export const processPush = inngest.createFunction(
     });
 
     if (!project) {
-      return { skipped: true, reason: "repo not connected to Commitly" };
+      return { skipped: true, reason: "repo not connected to Commitly AI" };
     }
 
     const commitsWithContext = await step.run("fetch-diffs", async (): Promise<CommitWithContext[]> => {

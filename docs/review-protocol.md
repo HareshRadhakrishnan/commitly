@@ -1,6 +1,6 @@
 # Review Protocol
 
-Self-review and code-review checklists for Commitly. Use before committing or approving PRs.
+Self-review and code-review checklists for Commitly AI. Use before committing or approving PRs.
 
 ---
 

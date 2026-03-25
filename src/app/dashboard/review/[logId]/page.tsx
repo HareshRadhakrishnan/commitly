@@ -1,10 +1,11 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
-import { Sparkles, ArrowLeft } from "lucide-react";
 import { CopyButton } from "./CopyButton";
 import { getReleaseDraftById } from "@/lib/db/release-drafts";
 import { getOrCreateUser } from "@/lib/db/users";
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 export default async function ReviewPage({
   params,
@@ -24,9 +25,7 @@ export default async function ReviewPage({
   if (!draft) notFound();
 
   const projectRaw = draft.projects;
-  const project = Array.isArray(projectRaw)
-    ? projectRaw[0]
-    : projectRaw;
+  const project = Array.isArray(projectRaw) ? projectRaw[0] : projectRaw;
   const projectData =
     project && typeof project === "object" && "user_id" in project
       ? (project as { user_id: string; repo_name: string })
@@ -44,105 +43,102 @@ export default async function ReviewPage({
 
   const originalCommits = content.original_commits ?? [];
 
+  const tabs = [
+    content.changelog && { key: "changelog", label: "Changelog", content: content.changelog },
+    content.linkedin && { key: "linkedin", label: "LinkedIn", content: content.linkedin },
+    content.twitter?.length &&
+      content.twitter.length > 0 && {
+        key: "twitter",
+        label: "Twitter / X",
+        content: content.twitter.join("\n\n— —\n\n"),
+      },
+  ].filter(Boolean) as { key: string; label: string; content: string }[];
+
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Dashboard
-            </Link>
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-amber-500" />
-              <span className="font-semibold text-zinc-900 dark:text-zinc-50">
-                Commitly
-              </span>
-            </div>
-          </div>
+    <div className="mx-auto max-w-3xl space-y-8">
+      {/* Header */}
+      <div>
+        <div className="mb-1 flex items-center gap-2">
+          <Badge
+            className="bg-brand-muted text-brand hover:bg-brand-muted border-0 text-[11px] font-semibold"
+          >
+            {projectData.repo_name}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            {new Date(draft.created_at).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </span>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-4xl px-6 py-12">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          Review draft — {projectData.repo_name}
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Review draft
         </h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          {new Date(draft.created_at).toLocaleDateString()}
+        <p className="mt-1 text-sm text-muted-foreground">
+          Review and copy the AI-generated marketing content below.
         </p>
+      </div>
 
-        <section className="mt-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Before (technical commits)
-          </h2>
-          <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-            {originalCommits.length > 0 ? (
-              <ul className="space-y-2 font-mono text-sm text-zinc-700 dark:text-zinc-300">
-                {originalCommits.map((c) => (
-                  <li key={c.id}>
-                    <span className="text-zinc-500">{c.id.slice(0, 7)}</span>{" "}
-                    {c.message}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-zinc-500">No commit details stored</p>
-            )}
-          </div>
-        </section>
+      {/* Before: original commits */}
+      <Card className="rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
+        <CardHeader>
+          <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Before — technical commits
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {originalCommits.length > 0 ? (
+            <ul className="space-y-2 font-mono text-[13px] leading-relaxed text-foreground">
+              {originalCommits.map((c) => (
+                <li key={c.id} className="flex gap-2">
+                  <span className="shrink-0 text-muted-foreground">{c.id.slice(0, 7)}</span>
+                  <span>{c.message}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No commit details stored.</p>
+          )}
+        </CardContent>
+      </Card>
 
-        <section className="mt-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            After (AI marketing copy)
+      {/* After: generated content in tabs */}
+      {tabs.length > 0 ? (
+        <div>
+          <h2 className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            After — AI marketing copy
           </h2>
-          <div className="space-y-6">
-            {content.changelog && (
-              <CopyBlock
-                title="Changelog"
-                content={content.changelog}
-              />
-            )}
-            {content.linkedin && (
-              <CopyBlock
-                title="LinkedIn Post"
-                content={content.linkedin}
-              />
-            )}
-            {content.twitter && content.twitter.length > 0 && (
-              <CopyBlock
-                title="Twitter / X Thread"
-                content={content.twitter.join("\n\n")}
-              />
-            )}
-          </div>
-        </section>
-      </main>
+          <Tabs defaultValue={tabs[0].key}>
+            <TabsList className="mb-4">
+              {tabs.map((t) => (
+                <TabsTrigger key={t.key} value={t.key}>
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {tabs.map((t) => (
+              <TabsContent key={t.key} value={t.key}>
+                <Card className="rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
+                  <CardHeader className="border-b border-border">
+                    <CardTitle className="text-sm font-medium">{t.label}</CardTitle>
+                    <CardAction>
+                      <CopyButton text={t.content} />
+                    </CardAction>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="whitespace-pre-wrap text-[15px] leading-[1.75] text-foreground">
+                      {t.content}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No generated content available.</p>
+      )}
     </div>
   );
 }
-
-function CopyBlock({
-  title,
-  content,
-}: {
-  title: string;
-  content: string;
-}) {
-  return (
-    <div className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
-        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          {title}
-        </span>
-        <CopyButton text={content} />
-      </div>
-      <div className="whitespace-pre-wrap p-4 text-sm text-zinc-700 dark:text-zinc-300">
-        {content}
-      </div>
-    </div>
-  );
-}
-

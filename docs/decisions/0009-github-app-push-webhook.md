@@ -6,7 +6,7 @@ Accepted (retroactive)
 
 ## Context
 
-Commitly needs to:
+Commitly AI needs to:
 - Discover user repositories (list what they can connect)
 - Receive notifications when code is pushed
 - Fetch commit details (diffs) for AI analysis

@@ -3,6 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signInWithCredentials } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function SignInForm() {
   const [email, setEmail] = useState("");
@@ -26,58 +30,46 @@ export function SignInForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div>
-        <label
-          htmlFor="email"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
-          Email
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="h-10"
           placeholder="you@example.com"
         />
       </div>
-      <div>
-        <div className="mb-1 flex items-center justify-between">
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-          >
-            Password
-          </label>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="password">Password</Label>
           <Link
             href="/forgot-password"
-            className="text-sm text-amber-600 hover:text-amber-500"
+            className="text-sm text-primary underline-offset-4 hover:underline"
           >
             Forgot password?
           </Link>
         </div>
-        <input
+        <Input
           id="password"
           type="password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="h-10"
           placeholder="Your password"
         />
       </div>
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-lg bg-amber-500 px-4 py-3 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
-      >
+      <Button type="submit" disabled={loading} className="h-10 w-full">
         {loading ? "Signing in…" : "Sign in with email"}
-      </button>
+      </Button>
     </form>
   );
 }

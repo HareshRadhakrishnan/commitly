@@ -1,4 +1,4 @@
-# Commitly documentation
+# Commitly AI documentation
 
 Categorized entry point for humans and AI. Prefer **tables** and **short bullets**; follow links for depth.
 

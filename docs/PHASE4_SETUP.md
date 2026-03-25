@@ -6,7 +6,7 @@ Add to `.env.local`:
 
 ```
 RESEND_API_KEY=re_...
-RESEND_FROM=Commitly <onboarding@resend.dev>   # Optional. For testing, use onboarding@resend.dev
+RESEND_FROM=Commitly AI <onboarding@resend.dev>   # Optional. For testing, use onboarding@resend.dev
 NEXT_PUBLIC_APP_URL=http://localhost:3000     # Your app URL (for email links). Use ngrok URL when testing webhooks.
 ```
 
@@ -15,7 +15,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000     # Your app URL (for email links). 
 1. Sign up at [resend.com](https://resend.com)
 2. Get your API key from the dashboard
 3. For testing: use `onboarding@resend.dev` as the sender (Resend allows this for testing to your own email)
-4. For production: verify your domain in Resend and set `RESEND_FROM` to e.g. `Commitly <notifications@yourdomain.com>`
+4. For production: verify your domain in Resend and set `RESEND_FROM` to e.g. `Commitly AI <notifications@yourdomain.com>`
 
 ## Flow
 

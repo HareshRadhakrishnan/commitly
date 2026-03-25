@@ -1,12 +1,18 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { Sparkles, ArrowLeft } from "lucide-react";
 import { getOrCreateUser } from "@/lib/db/users";
 import { getDraftCountForUserThisMonth } from "@/lib/db/usage";
 import { getTierLimits } from "@/lib/subscription";
 import { UpgradeButton } from "./UpgradeButton";
 import { ManageBillingButton } from "./ManageBillingButton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default async function BillingPage() {
   const session = await auth();
@@ -21,82 +27,91 @@ export default async function BillingPage() {
   const draftCount = await getDraftCountForUserThisMonth(dbUser.id);
   const hasStripe = !!process.env.STRIPE_PRICE_FOUNDER;
 
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-          >
-            <Sparkles className="h-6 w-6 text-amber-500" />
-            <span className="font-semibold">Commitly</span>
-          </Link>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
-          </Link>
-        </div>
-      </header>
+  const tierLabel = tier.charAt(0).toUpperCase() + tier.slice(1);
 
-      <main className="mx-auto max-w-4xl px-6 py-12">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-          Billing
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+  return (
+    <div className="mx-auto max-w-4xl space-y-10">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Billing</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Manage your subscription and usage.
         </p>
+      </div>
 
-        <section className="mt-8 rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Current plan: {tier.charAt(0).toUpperCase() + tier.slice(1)}
-          </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg bg-zinc-50 p-4 dark:bg-zinc-900">
-              <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+      {/* Current plan card */}
+      <Card className="rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-base">Current plan</CardTitle>
+            <Badge className="bg-brand-muted text-brand hover:bg-brand-muted border-0 text-[11px] font-semibold uppercase tracking-wider">
+              {tierLabel}
+            </Badge>
+          </div>
+          <CardDescription>Your usage and limits this billing period.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Usage stats */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl bg-muted/50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Drafts this month
               </p>
-              <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+              <p className="mt-1 text-2xl font-semibold text-foreground">
                 {draftCount}
-                {limits.draftsPerMonth === Infinity ? "" : ` / ${limits.draftsPerMonth}`}
+                {limits.draftsPerMonth !== Infinity && (
+                  <span className="text-base font-normal text-muted-foreground">
+                    {" "}/ {limits.draftsPerMonth}
+                  </span>
+                )}
               </p>
+              {limits.draftsPerMonth !== Infinity && (
+                <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-brand transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, (draftCount / limits.draftsPerMonth) * 100)}%`,
+                    }}
+                  />
+                </div>
+              )}
             </div>
-            <div className="rounded-lg bg-zinc-50 p-4 dark:bg-zinc-900">
-              <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+            <div className="rounded-xl bg-muted/50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Repo limit
               </p>
-              <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+              <p className="mt-1 text-2xl font-semibold text-foreground">
                 {limits.repos === Infinity ? "Unlimited" : limits.repos}
               </p>
             </div>
           </div>
 
+          {/* Manage / upgrade */}
           {tier === "founder" || tier === "team" ? (
-            <div className="mt-6">
-              <ManageBillingButton />
-            </div>
+            <ManageBillingButton />
           ) : hasStripe ? (
-            <div className="mt-6">
-              <UpgradeButton />
-            </div>
-          ) : null}
-        </section>
-
-        {hasStripe && tier === "free" && (
-          <section className="mt-8 rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-900/50 dark:bg-amber-950/20">
-            <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-              Upgrade to Founder
-            </h2>
-            <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
-              $19/month — Unlimited repos, unlimited drafts, and Brand Voice.
-            </p>
             <UpgradeButton />
-          </section>
-        )}
-      </main>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Upgrade banner for free users */}
+      {hasStripe && tier === "free" && (
+        <Card className="rounded-2xl border-dashed shadow-none">
+          <CardHeader>
+            <CardTitle className="text-base">Upgrade to Founder</CardTitle>
+            <CardDescription>
+              $19/month — Unlimited repos, unlimited drafts, and Brand Voice. Cancel anytime.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UpgradeButton />
+          </CardContent>
+        </Card>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Payments are processed securely by Stripe. We never store your card details.
+      </p>
     </div>
   );
 }

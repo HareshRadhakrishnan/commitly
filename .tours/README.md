@@ -1,6 +1,6 @@
 # Code Tours
 
-Interactive walkthroughs of Commitly's key flows. Tours teach system behavior, not just file locations.
+Interactive walkthroughs of Commitly AI's key flows. Tours teach system behavior, not just file locations.
 
 ---
 

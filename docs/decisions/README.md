@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADRs)
 
-This directory contains Architecture Decision Records for Commitly.
+This directory contains Architecture Decision Records for Commitly AI.
 
 ---
 

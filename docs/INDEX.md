@@ -1,4 +1,4 @@
-# Commitly docs — intent index
+# Commitly AI docs — intent index
 
 **Goal:** Find the right doc by **what you need to do**, not by folder name.
 
@@ -53,6 +53,7 @@ Paths are **repo-root-relative** (e.g. `docs/STRIPE_SETUP.md`).
 |------------|----------|-------|
 | Add a page, API route, or server action | `AGENTS.md` → Task Router | Start file for each task type |
 | Follow global conventions | `.cursor/rules/project-conventions.mdc` | Naming, DB, auth, Inngest |
+| Follow UI/UX design spec | `.cursor/plans/Ui-design-spec.md` | Colors, components, layout, radius, dark mode |
 | Change prompts or model output shape | `docs/canonical-examples.md` + `src/lib/ai/` | Blast radius: prompts ↔ JSON parse |
 | Add a DB table or column | `supabase/migrations/` + `AGENTS.md` | New `00X_*.sql`; update `src/lib/db/` |
 | Record a new architecture decision | `docs/decisions/README.md` | Copy TEMPLATE.md |
@@ -116,3 +117,4 @@ Paths are **repo-root-relative** (e.g. `docs/STRIPE_SETUP.md`).
 | `instructions.md` / `instructionsV2.md` | Product requirements |
 | `.cursor/rules/project-conventions.mdc` | Daily conventions |
 | `.cursor/rules/blast-radius.mdc` | Risky couplings |
+| `.cursor/plans/Ui-design-spec.md` | Visual/UX north star — colors, tokens, layout, components |

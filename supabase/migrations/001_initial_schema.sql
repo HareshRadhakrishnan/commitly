@@ -1,4 +1,4 @@
--- Commitly initial schema
+-- Commitly AI initial schema
 -- Run this in Supabase SQL Editor: Dashboard → SQL Editor → New query
 
 -- Users: synced from NextAuth on first sign-in

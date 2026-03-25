@@ -1,8 +1,8 @@
-# Version 2 PRD: "Commitly" – Customer-Ready Upgrade
+# Version 2 PRD: "Commitly AI" – Customer-Ready Upgrade
 
 ## 1. Executive Summary
 
-Version 2 transforms Commitly from MVP to a production-ready product with **zero-config onboarding**, **direct social publishing**, and **monetization**. The goal: users reach their first AI-generated post in under 3 minutes.
+Version 2 transforms Commitly AI from MVP to a production-ready product with **zero-config onboarding**, **direct social publishing**, and **monetization**. The goal: users reach their first AI-generated post in under 3 minutes.
 
 ---
 
@@ -53,7 +53,7 @@ Version 2 transforms Commitly from MVP to a production-ready product with **zero
 **Implementation:**
 - **Stripe:** Stripe Checkout for subscriptions; webhook for `customer.subscription.created/updated/deleted`
 - **Usage tracking:** Count drafts per user per month; enforce in Inngest before creating draft
-- **Growth hack:** "Build in Public" discount – 20% off if user mentions "Drafted by Commitly" in a post (manual verification or future automation)
+- **Growth hack:** "Build in Public" discount – 20% off if user mentions "Drafted by Commitly AI" in a post (manual verification or future automation)
 
 **Schema:**
 

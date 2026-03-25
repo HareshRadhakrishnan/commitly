@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { hash, signUpAndSignIn } from "@/app/signup/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function SignUpForm() {
   const [email, setEmail] = useState("");
@@ -34,69 +38,52 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div>
-        <label
-          htmlFor="email"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
-          Email
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="h-10"
           placeholder="you@example.com"
         />
       </div>
-      <div>
-        <label
-          htmlFor="password"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
-          Password
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
           id="password"
           type="password"
           required
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="h-10"
           placeholder="At least 8 characters"
         />
       </div>
-      <div>
-        <label
-          htmlFor="confirmPassword"
-          className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-        >
-          Confirm password
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">Confirm password</Label>
+        <Input
           id="confirmPassword"
           type="password"
           required
           minLength={8}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className="h-10"
           placeholder="Repeat password"
         />
       </div>
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-lg bg-amber-500 px-4 py-3 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
-      >
+      <Button type="submit" disabled={loading} className="h-10 w-full">
         {loading ? "Creating account…" : "Create account"}
-      </button>
+      </Button>
     </form>
   );
 }

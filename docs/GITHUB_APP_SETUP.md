@@ -5,7 +5,7 @@ The GitHub App enables users to connect repositories with one click instead of m
 ## 1. Create a GitHub App
 
 1. Go to [GitHub Developer Settings](https://github.com/settings/apps) → **New GitHub App**
-2. **Name:** Commitly (or your app name)
+2. **Name:** Commitly AI (or your app name)
 3. **Homepage URL:** `https://your-domain.com` (or `http://localhost:3000` for dev)
 4. **Callback URL:** Leave empty (we use Setup URL)
 5. **Setup URL:** `https://your-domain.com/dashboard/github/callback` (or `http://localhost:3000/dashboard/github/callback` for dev with ngrok)

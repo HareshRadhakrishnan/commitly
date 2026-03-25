@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { addProject } from "../actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function AddProjectForm() {
   const [repoId, setRepoId] = useState("");
@@ -34,35 +37,39 @@ export function AddProjectForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <div className="flex gap-2">
-        <input
+      <div className="flex flex-wrap gap-2">
+        <Input
           type="text"
           placeholder="Repo ID (e.g. 123456)"
           value={repoId}
           onChange={(e) => setRepoId(e.target.value)}
-          className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-w-[8rem] flex-1"
         />
-        <input
+        <Input
           type="text"
           placeholder="owner/repo"
           value={repoName}
           onChange={(e) => setRepoName(e.target.value)}
-          className="flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className="min-w-[10rem] flex-[2]"
         />
       </div>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         Get repo ID from: GitHub repo → Settings → General (bottom) or from
         webhook payload
       </p>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {success && <p className="text-sm text-green-600">Project connected!</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-fit rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
-      >
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {success && (
+        <Alert className="border-emerald-500/30 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/30 dark:text-emerald-50">
+          <AlertDescription>Project connected!</AlertDescription>
+        </Alert>
+      )}
+      <Button type="submit" disabled={loading} size="sm" className="w-fit">
         {loading ? "Adding…" : "Connect repo"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -6,7 +6,7 @@ Accepted (retroactive)
 
 ## Context
 
-Commitly has subscription tiers (free, founder, team) with different limits. Payment processing needed to:
+Commitly AI has subscription tiers (free, founder, team) with different limits. Payment processing needed to:
 - Accept credit card payments
 - Manage recurring subscriptions
 - Update user tier on payment events

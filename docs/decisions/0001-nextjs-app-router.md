@@ -6,7 +6,7 @@ Accepted (retroactive)
 
 ## Context
 
-Commitly needed a full-stack framework for:
+Commitly AI needed a full-stack framework for:
 - Server-rendered pages with auth protection
 - API routes for webhooks (GitHub, Stripe, Inngest)
 - Server Actions for form mutations
