@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { getOrCreateUser } from "@/lib/db/users";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { canConnectRepo } from "@/lib/subscription";
+import { inngest } from "@/inngest/client";
 
 export async function addProject(repoId: number, repoName: string) {
   const session = await auth();
@@ -71,20 +72,40 @@ export async function connectRepo(repoId: number, repoName: string) {
 
   const installationId = installation?.installation_id ?? null;
 
+  let projectId: string
+
   if (existing) {
     await supabaseAdmin
       .from("projects")
       .update({ is_active: true, github_installation_id: installationId })
-      .eq("id", existing.id);
+      .eq("id", existing.id)
+    projectId = existing.id
   } else {
-    const { error } = await supabaseAdmin.from("projects").insert({
-      user_id: dbUser.id,
-      github_repo_id: repoId,
-      repo_name: repoName,
-      is_active: true,
-      github_installation_id: installationId,
-    });
-    if (error) throw error;
+    const { data: inserted, error } = await supabaseAdmin
+      .from("projects")
+      .insert({
+        user_id: dbUser.id,
+        github_repo_id: repoId,
+        repo_name: repoName,
+        is_active: true,
+        github_installation_id: installationId,
+      })
+      .select("id")
+      .single()
+    if (error) throw error
+    projectId = inserted.id
+  }
+
+  // Trigger full repo indexing as a background job (non-blocking)
+  if (installationId) {
+    await inngest.send({
+      name: "github/repo.connected",
+      data: {
+        project_id: projectId,
+        repo_full_name: repoName,
+        installation_id: installationId,
+      },
+    })
   }
 }
 

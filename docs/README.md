@@ -55,7 +55,7 @@ Categorized entry point for humans and AI. Prefer **tables** and **short bullets
 | [docs/GITHUB_APP_SETUP.md](GITHUB_APP_SETUP.md) | GitHub App: permissions, setup URL, installation flow |
 | [docs/GITHUB_WEBHOOK_SETUP.md](GITHUB_WEBHOOK_SETUP.md) | Webhook URL, secret, push events, local testing |
 | [docs/STRIPE_SETUP.md](STRIPE_SETUP.md) | Products, webhooks, env vars, Stripe CLI |
-| [supabase/migrations/](../supabase/migrations/) | Authoritative schema (run order `001` → `005`) |
+| [supabase/migrations/](../supabase/migrations/) | Authoritative schema (run order `001` → `006`) |
 
 ---
 

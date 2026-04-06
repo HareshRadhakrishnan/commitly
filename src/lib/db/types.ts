@@ -12,6 +12,7 @@ export type Project = {
   user_id: string;
   github_repo_id: number;
   repo_name: string;
+  repo_summary: string | null;
   created_at: string;
 };
 

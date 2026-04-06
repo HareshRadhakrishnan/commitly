@@ -39,9 +39,11 @@ export default async function ReviewPage({
     linkedin?: string;
     twitter?: string[];
     original_commits?: { id: string; message: string }[];
+    commit_explanations?: { sha: string; explanation: string }[];
   }) ?? {};
 
   const originalCommits = content.original_commits ?? [];
+  const commitExplanations = content.commit_explanations ?? [];
 
   const tabs = [
     content.changelog && { key: "changelog", label: "Changelog", content: content.changelog },
@@ -102,6 +104,31 @@ export default async function ReviewPage({
           )}
         </CardContent>
       </Card>
+
+      {/* What changed: engineer's view */}
+      {commitExplanations.length > 0 && (
+        <Card className="rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.05)] border-l-4 border-l-amber-400">
+          <CardHeader>
+            <CardTitle className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              What changed — engineer&apos;s view
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-5">
+              {commitExplanations.map((item) => (
+                <li key={item.sha} className="space-y-1">
+                  <span className="font-mono text-[12px] text-muted-foreground">
+                    {item.sha}
+                  </span>
+                  <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground">
+                    {item.explanation}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* After: generated content in tabs */}
       {tabs.length > 0 ? (

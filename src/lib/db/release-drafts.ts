@@ -7,6 +7,7 @@ export type CreateReleaseDraftInput = {
     linkedin?: string;
     twitter?: string[];
     original_commits?: { id: string; message: string }[];
+    commit_explanations?: { sha: string; explanation: string }[];
   };
   commit_shas: string[];
 };

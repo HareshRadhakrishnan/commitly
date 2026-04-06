@@ -8,6 +8,10 @@
 4. Run each migration in order:
    - `migrations/001_initial_schema.sql`
    - `migrations/002_add_password_auth.sql` (adds `password_hash` for email/password login)
+   - `migrations/003_github_app_schema.sql` (GitHub App installations + `projects` columns)
+   - `migrations/004_subscription_schema.sql` (subscription tiers)
+   - `migrations/005_brand_examples.sql` (brand voice examples)
+   - `migrations/006_repo_context.sql` (pgvector extension + `repo_file_chunks` table + `repo_summary` on projects — required for RAG context pipeline)
 
 ## 2. Environment variables
 

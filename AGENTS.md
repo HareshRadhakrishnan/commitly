@@ -32,21 +32,26 @@ commitly/
 │   │   └── page.tsx                  # Landing page
 │   ├── inngest/
 │   │   ├── client.ts                 # Inngest instance
-│   │   └── functions/process-push.ts # Main background job: webhook → AI → draft
+│   │   ├── functions/process-push.ts # Main background job: webhook → AI → draft
+│   │   ├── functions/index-repo.ts   # Full repo indexing on connect (RAG)
+│   │   └── functions/update-embeddings.ts # Incremental re-index on push (RAG)
 │   ├── lib/
 │   │   ├── ai/
-│   │   │   ├── generate.ts           # AI calls (checkSignificance, generateContent)
-│   │   │   └── prompts.ts            # Prompt builders for significance + generation
+│   │   │   ├── generate.ts           # AI calls (checkSignificance, explainCommits, generateContent)
+│   │   │   └── prompts.ts            # Prompt builders for significance + explanation + generation
 │   │   ├── db/                       # Supabase data access layer
 │   │   │   ├── brand-examples.ts
 │   │   │   ├── projects.ts
 │   │   │   ├── release-drafts.ts
+│   │   │   ├── repo-chunks.ts        # pgvector chunk helpers (RAG)
 │   │   │   ├── types.ts              # TypeScript types for DB entities
 │   │   │   ├── usage.ts              # Draft count tracking
 │   │   │   └── users.ts
 │   │   ├── email/resend.ts           # Email sending via Resend
 │   │   ├── github/
 │   │   │   ├── app.ts                # GitHub App JWT, installation tokens, API calls
+│   │   │   ├── chunker.ts            # Function-level file chunker + hunk range parser (RAG)
+│   │   │   ├── context.ts            # getFileContext() 4-level fallback + handleDeletedFile() (RAG)
 │   │   │   └── webhook.ts            # Webhook signature verification, payload parsing
 │   │   ├── supabase/
 │   │   │   ├── client.ts             # Browser client (unused currently)
@@ -69,7 +74,8 @@ commitly/
 │   │   ├── 002_add_password_auth.sql
 │   │   ├── 003_github_app_schema.sql
 │   │   ├── 004_subscription_schema.sql
-│   │   └── 005_brand_examples.sql
+│   │   ├── 005_brand_examples.sql
+│   │   └── 006_repo_context.sql      # pgvector, repo_summary, repo_file_chunks (RAG)
 │   └── README.md                     # Supabase setup instructions
 ├── docs/
 │   └── STRIPE_SETUP.md               # Stripe configuration guide
@@ -110,8 +116,12 @@ commitly/
 | Add a new background job | `src/inngest/functions/{name}.ts` | Create function with `inngest.createFunction()`, register in `api/inngest/route.ts` |
 | Change database schema | `supabase/migrations/00X_*.sql` | Create new migration file, run in Supabase SQL Editor |
 | Add new DB query | `src/lib/db/{entity}.ts` | Use `supabaseAdmin` from `lib/supabase/server.ts` |
-| Modify AI prompts | `src/lib/ai/prompts.ts` | Edit `buildSignificancePrompt` or `buildGenerationPrompt` |
+| Modify AI prompts | `src/lib/ai/prompts.ts` | Edit `buildSignificancePrompt`, `buildExplanationPrompt`, or `buildGenerationPrompt` |
 | Modify AI generation | `src/lib/ai/generate.ts` | Uses Vercel AI SDK with OpenAI |
+| Modify RAG context retrieval | `src/lib/github/context.ts`, `src/lib/db/repo-chunks.ts` | 4-level fallback, pgvector cosine search |
+| Modify repo indexing (full) | `src/inngest/functions/index-repo.ts` | Full re-index on `github/repo.connected` |
+| Modify repo indexing (incremental) | `src/inngest/functions/update-embeddings.ts` | Per-push re-index, SHA cache, deleted file handling |
+| Modify file chunking strategy | `src/lib/github/chunker.ts` | Function-level boundaries, line ranges, content SHA |
 | Add email template | `src/lib/email/resend.ts` | Add new function, use inline HTML |
 | Add subscription logic | `src/lib/subscription.ts` | Update `TIER_LIMITS`, add tier-checking helpers |
 | Add new auth provider | `src/auth.ts` | Add to `providers` array, handle in `signIn` callback |
@@ -150,6 +160,9 @@ commitly/
 | Use Supabase RLS for auth | Auth is in application code via NextAuth session | RLS is disabled in this codebase |
 | Add a header/nav inside a dashboard page | The `DashboardShell` in `dashboard/layout.tsx` already provides chrome | Adding per-page headers creates duplicate chrome and visual inconsistency |
 | Use `text-primary` for links or accents | Use `text-brand` for violet accents; `text-primary` is black (primary button color) | Semantic mismatch breaks theming |
+| Call `getFileContext()` on deleted files | Check `f.status === 'removed'` first; call `handleDeletedFile()` instead | Deleted files have no content at the commit SHA — fetch will always return null |
+| Query `repo_file_chunks` with raw diff text as embedding input | Use the stored chunk embedding for cosine search; use `parseHunkRanges(diffText)` for line-range queries | Embedding the raw diff loses structural precision; line-range query is free and exact |
+| Forget to register new Inngest functions | Add to the `functions` array in `src/app/api/inngest/route.ts` | Inngest won't know about the function and events will be silently dropped |
 
 ---
 
@@ -180,6 +193,8 @@ commitly/
 | **Add a new page** | `src/auth.ts`, `src/app/dashboard/page.tsx` | `src/lib/db/users.ts` for user queries |
 | **Add API endpoint** | `src/app/api/webhooks/github/route.ts` (pattern example) | `src/lib/supabase/server.ts` |
 | **Modify AI behavior** | `src/lib/ai/prompts.ts`, `src/lib/ai/generate.ts` | `src/inngest/functions/process-push.ts` |
+| **Modify RAG / context retrieval** | `src/lib/github/context.ts`, `src/lib/github/chunker.ts`, `src/lib/db/repo-chunks.ts` | `src/inngest/functions/process-push.ts` (retrieve-context step) |
+| **Modify repo indexing** | `src/inngest/functions/index-repo.ts`, `src/inngest/functions/update-embeddings.ts` | `src/lib/github/chunker.ts`, `src/lib/db/repo-chunks.ts` |
 | **Change DB schema** | `supabase/migrations/*.sql` (all), `src/lib/db/types.ts` | Relevant `src/lib/db/*.ts` file |
 | **Debug webhook flow** | `src/app/api/webhooks/github/route.ts` → `src/inngest/functions/process-push.ts` | `src/lib/github/webhook.ts`, `src/lib/db/projects.ts` |
 | **Modify subscriptions** | `src/lib/subscription.ts`, `supabase/migrations/004_subscription_schema.sql` | `src/lib/stripe.ts`, `src/app/api/stripe/webhook/route.ts` |
@@ -195,7 +210,17 @@ commitly/
 **Request Flow (GitHub Push → Draft)**:
 1. GitHub sends POST to `/api/webhooks/github`
 2. Route verifies signature, parses payload, dispatches `github/push` event to Inngest
-3. Inngest `process-push` function: finds project → fetches diffs → checks significance → generates content → creates draft → sends email
+3. Inngest `process-push` function (RAG-enhanced pipeline):
+   - finds project → fetches diffs → **checks significance (early exit for ~60-70% of pushes)**
+   - fires `github/repo.files-changed` as non-blocking side-effect → `update-embeddings` keeps vector store fresh
+   - **retrieve-context**: calls `getFileContext()` per changed file — line-range chunk query → GitHub file fetch → diff text → empty (4-level fallback); deleted files call `handleDeletedFile()` to purge stale chunks
+   - **explain-commits**: single batched GPT call with changed function chunks + related chunks + `repo_summary` → plain-English explanation per commit
+   - generates marketing content (changelog / LinkedIn / Twitter) with explanation-enriched context
+   - creates draft (stores `commit_explanations` in `ai_content` JSONB) → sends email
+
+**Repo Indexing Flow (on connect)**:
+1. `connectRepo` action fires `github/repo.connected` event
+2. `index-repo` Inngest function: fetches recursive repo tree → function-level chunks with `start_line`/`end_line`/`content_sha` → embeds via `text-embedding-3-small` → stores in `repo_file_chunks` (pgvector); also summarizes README → stores as `projects.repo_summary`
 
 **Auth Flow**:
 - NextAuth v5 handles session; stores user in JWT

@@ -26,6 +26,7 @@ ADRs document **significant technical decisions** along with their context, cons
 | [0008](0008-resend-email.md) | Resend for transactional email | Accepted (retroactive) | Inline HTML templates; draft notifications |
 | [0009](0009-github-app-push-webhook.md) | GitHub App with push webhook | Accepted (retroactive) | Installation-based repo discovery; push events to /api/webhooks/github |
 | [0010](0010-usage-limits-app-code.md) | Usage limits in application code | Accepted (retroactive) | usage_records table + subscription.ts helpers |
+| [0011](0011-rag-context-pipeline.md) | RAG context pipeline for AI-generated explanations | Accepted | pgvector repo indexing + function-level chunk retrieval + explain-commits step |
 
 ---
 

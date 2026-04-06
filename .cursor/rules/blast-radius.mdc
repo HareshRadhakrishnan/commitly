@@ -22,4 +22,12 @@ Before committing, check these high-risk couplings:
 
 7. **Brand example platforms**: If you add platforms beyond `linkedin`/`twitter`/`changelog`, MUST update CHECK constraint in `005_brand_examples.sql`, `src/lib/db/types.ts`, AND `src/lib/ai/prompts.ts` grouping logic.
 
+8. **RAG pipeline — chunk schema ↔ DB helpers ↔ embedding calls**: If you change columns on `repo_file_chunks` (e.g. add `end_line`, rename `content_sha`), MUST update `src/lib/db/repo-chunks.ts` selects AND `src/inngest/functions/index-repo.ts` + `update-embeddings.ts` insert payloads AND `src/lib/github/context.ts` if field names change.
+
+9. **RAG pipeline — embedding model/dimensions**: If you change the embedding model or dimensions in `index-repo.ts`, MUST use the same model/dimensions in `update-embeddings.ts` AND `process-push.ts` (retrieve-context step). Mixing models produces wrong cosine distances. Also drop and recreate `repo_file_chunks` if dimensions change (vector column size is fixed at table creation).
+
+10. **RAG pipeline — explain-commits output shape**: If you change the JSON keys in `buildExplanationPrompt()` (`src/lib/ai/prompts.ts`), MUST update the parsing in `explainCommits()` (`src/lib/ai/generate.ts`) AND the `commit_explanations` field in `CreateReleaseDraftInput` (`src/lib/db/release-drafts.ts`) AND the review page (`src/app/dashboard/review/[logId]/page.tsx`).
+
+11. **Inngest event shapes — github/repo.files-changed**: If you change the payload sent by `process-push.ts` (e.g. field names in `changed_files`), MUST update `src/inngest/functions/update-embeddings.ts` (`UpdateEmbeddingsEventData` type) and the `ChangedFile` type in `update-embeddings.ts`.
+
 Full maps: `AGENTS.md` → Key Invariants, Common Mistakes

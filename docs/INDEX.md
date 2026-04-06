@@ -12,7 +12,7 @@ Paths are **repo-root-relative** (e.g. `docs/STRIPE_SETUP.md`).
 |------------|----------|-------|
 | Orient in the repo fast | `AGENTS.md` | Map, commands, task router |
 | Copy the "right" pattern for code | `docs/canonical-examples.md` | One canonical file per pattern |
-| Run database migrations | `supabase/README.md` | SQL Editor order `001`–`005` |
+| Run database migrations | `supabase/README.md` | SQL Editor order `001`–`006` |
 | Know what we're building (MVP) | `instructions.md` | PRD v1 |
 | Know V2 scope (billing, repos, brand) | `instructionsV2.md` | PRD v2 |
 | Learn a flow interactively | `.tours/README.md` | CodeTour walkthroughs |
@@ -23,7 +23,8 @@ Paths are **repo-root-relative** (e.g. `docs/STRIPE_SETUP.md`).
 
 | I need to… | Document | Notes |
 |------------|----------|-------|
-| Trace push → draft → email | `docs/PHASE3_SETUP.md`, `docs/PHASE4_SETUP.md` | AI + Inngest; Resend + review UI |
+| Trace push → draft → email | `docs/PHASE3_SETUP.md`, `docs/PHASE4_SETUP.md` | AI + Inngest + RAG; Resend + review UI |
+| Understand the RAG context pipeline | `docs/PHASE3_SETUP.md` | Repo indexing, chunk retrieval, explain-commits step |
 | See full schema history | `supabase/migrations/*.sql` | Source of truth for tables |
 | Understand why a decision was made | `docs/decisions/README.md` | ADR index with links |
 | Walk through a specific flow | `.tours/*.tour` | Interactive code tours |
@@ -38,7 +39,7 @@ Paths are **repo-root-relative** (e.g. `docs/STRIPE_SETUP.md`).
 |------------|----------|-------|
 | Configure GitHub App + install URL | `docs/GITHUB_APP_SETUP.md` | Setup URL, callback, env vars |
 | Point webhooks at the app (local/prod) | `docs/GITHUB_WEBHOOK_SETUP.md` | Secret, ngrok, push events |
-| Enable AI generation | `docs/PHASE3_SETUP.md` | `OPENAI_API_KEY`, repo connect |
+| Enable AI generation + RAG indexing | `docs/PHASE3_SETUP.md` | `OPENAI_API_KEY`, migration 006, repo connect |
 | Enable notification emails | `docs/PHASE4_SETUP.md` | Resend, `NEXT_PUBLIC_APP_URL` |
 | Enable subscriptions | `docs/STRIPE_SETUP.md` | Checkout, portal, webhook events |
 | Deploy and set production env | `docs/DEPLOYMENT.md` | Vercel + env table |
@@ -55,6 +56,8 @@ Paths are **repo-root-relative** (e.g. `docs/STRIPE_SETUP.md`).
 | Follow global conventions | `.cursor/rules/project-conventions.mdc` | Naming, DB, auth, Inngest |
 | Follow UI/UX design spec | `.cursor/plans/Ui-design-spec.md` | Colors, components, layout, radius, dark mode |
 | Change prompts or model output shape | `docs/canonical-examples.md` + `src/lib/ai/` | Blast radius: prompts ↔ JSON parse |
+| Change the RAG chunking strategy | `src/lib/github/chunker.ts` | Update `BOUNDARY_PATTERNS`; re-run `index-repo` for all connected repos |
+| Change context retrieval fallback logic | `src/lib/github/context.ts` | 4-level cascade: line-range → file fetch → diff → empty |
 | Add a DB table or column | `supabase/migrations/` + `AGENTS.md` | New `00X_*.sql`; update `src/lib/db/` |
 | Record a new architecture decision | `docs/decisions/README.md` | Copy TEMPLATE.md |
 | **Planned:** contributor checklist | `docs/CONTRIBUTING.md` | *Not created yet* |
@@ -69,6 +72,8 @@ Paths are **repo-root-relative** (e.g. `docs/STRIPE_SETUP.md`).
 | Fix Stripe events not updating tier | `docs/STRIPE_SETUP.md` | Stripe CLI forward, signing secret |
 | Fix emails with wrong or broken links | `docs/PHASE4_SETUP.md` | `NEXT_PUBLIC_APP_URL` |
 | Fix AI or Inngest not running | `docs/PHASE3_SETUP.md` | Keys, Inngest dev, function registration |
+| Fix "no context" / generic explanations | `docs/PHASE3_SETUP.md` + `src/lib/github/context.ts` | Check migration 006 ran; check `repo_file_chunks` has rows; check `index-repo` completed |
+| Fix "What changed" card not appearing | `src/app/dashboard/review/[logId]/page.tsx` + `ai_content.commit_explanations` | Only shown when `commit_explanations` array is non-empty in the draft |
 | Avoid shipping a coupling bug | `.cursor/rules/blast-radius.mdc` | Pre-commit checklist |
 
 ---
