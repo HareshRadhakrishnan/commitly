@@ -300,7 +300,14 @@ export async function fetchFileContent(
   if (data.encoding !== "base64" || !data.content) return null;
 
   try {
-    return Buffer.from(data.content.replace(/\n/g, ""), "base64").toString("utf-8");
+    const decoded = Buffer.from(data.content.replace(/\n/g, ""), "base64").toString("utf-8");
+    // Strip characters that break JSON serialization (null bytes, lone surrogates).
+    // Inngest serializes step return values as JSON; invalid Unicode causes
+    // "unsupported Unicode escape sequence" errors in the embed-chunks step.
+    return decoded
+      .replace(/\0/g, "")                    // null bytes
+      .replace(/[\uD800-\uDFFF]/g, "")       // lone surrogate halves (invalid Unicode)
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "") // non-printable control chars
   } catch {
     return null;
   }
