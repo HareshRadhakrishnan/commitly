@@ -28,7 +28,7 @@ type UpdateEmbeddingsEventData = {
 const EMBED_BATCH_SIZE = 100
 
 export const updateEmbeddings = inngest.createFunction(
-  { id: "update-embeddings", concurrency: { limit: 10 } },
+  { id: "update-embeddings", concurrency: { limit: 5 } },
   { event: "github/repo.files-changed" },
   async ({ event, step }) => {
     const {
