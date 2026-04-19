@@ -128,6 +128,44 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+             {/* Recent drafts */}
+      {drafts && drafts.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-base font-semibold tracking-tight text-foreground">
+            Recent drafts
+          </h2>
+          <ul className="space-y-1">
+            {drafts.map((d) => {
+              const p = Array.isArray(d.projects) ? d.projects[0] : d.projects;
+              const repoName =
+                p && typeof p === "object" && "repo_name" in p
+                  ? (p as { repo_name: string }).repo_name
+                  : "Unknown repo";
+              return (
+                <li key={d.id}>
+                  <Link
+                    href={`/dashboard/review/${d.id}`}
+                    className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150 hover:bg-muted/60"
+                  >
+                    <FileText
+                      className="size-4 shrink-0 text-muted-foreground"
+                      strokeWidth={1.5}
+                    />
+                    <span className="font-medium text-foreground">{repoName}</span>
+                    <span className="text-muted-foreground">
+                      {new Date(d.created_at).toLocaleDateString()}
+                    </span>
+                    <ChevronRight
+                      className="ml-auto size-4 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                      strokeWidth={1.5}
+                    />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       {/* Connected repos + connect card */}
       <section>
         <h2 className="mb-4 text-base font-semibold leading-snug tracking-[-0.01em] text-foreground">
@@ -206,44 +244,7 @@ export default async function DashboardPage() {
         </Card>
       </section>
 
-      {/* Recent drafts */}
-      {drafts && drafts.length > 0 && (
-        <section>
-          <h2 className="mb-4 text-base font-semibold tracking-tight text-foreground">
-            Recent drafts
-          </h2>
-          <ul className="space-y-1">
-            {drafts.map((d) => {
-              const p = Array.isArray(d.projects) ? d.projects[0] : d.projects;
-              const repoName =
-                p && typeof p === "object" && "repo_name" in p
-                  ? (p as { repo_name: string }).repo_name
-                  : "Unknown repo";
-              return (
-                <li key={d.id}>
-                  <Link
-                    href={`/dashboard/review/${d.id}`}
-                    className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150 hover:bg-muted/60"
-                  >
-                    <FileText
-                      className="size-4 shrink-0 text-muted-foreground"
-                      strokeWidth={1.5}
-                    />
-                    <span className="font-medium text-foreground">{repoName}</span>
-                    <span className="text-muted-foreground">
-                      {new Date(d.created_at).toLocaleDateString()}
-                    </span>
-                    <ChevronRight
-                      className="ml-auto size-4 text-muted-foreground opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                      strokeWidth={1.5}
-                    />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+     
     </div>
   );
 }
