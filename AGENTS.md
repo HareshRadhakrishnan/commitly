@@ -50,9 +50,13 @@ commitly/
 │   │   ├── email/resend.ts           # Email sending via Resend
 │   │   ├── github/
 │   │   │   ├── app.ts                # GitHub App JWT, installation tokens, API calls
-│   │   │   ├── chunker.ts            # Function-level file chunker + hunk range parser (RAG)
+│   │   │   ├── chunker.ts            # Function-level file chunker + hunk range parser (RAG); async chunkFile() tries CST first
 │   │   │   ├── context.ts            # getFileContext() 4-level fallback + handleDeletedFile() (RAG)
-│   │   │   └── webhook.ts            # Webhook signature verification, payload parsing
+│   │   │   ├── webhook.ts            # Webhook signature verification, payload parsing
+│   │   │   └── tree-sitter/          # CST parsing via web-tree-sitter (TS/TSX/JS); WASM in public/wasm/
+│   │   │       ├── parser.ts         # Lazy singleton Parser init; grammarForPath(); parseSource()
+│   │   │       ├── chunk.ts          # chunkFileWithCST() — named-node chunking, same FileChunk shape
+│   │   │       └── digest.ts         # buildFileDigest() / buildCommitDigest() — structural change summary
 │   │   ├── supabase/
 │   │   │   ├── client.ts             # Browser client (unused currently)
 │   │   │   └── server.ts             # Server-side admin client
@@ -121,7 +125,9 @@ commitly/
 | Modify RAG context retrieval | `src/lib/github/context.ts`, `src/lib/db/repo-chunks.ts` | 4-level fallback, pgvector cosine search |
 | Modify repo indexing (full) | `src/inngest/functions/index-repo.ts` | Full re-index on `github/repo.connected` |
 | Modify repo indexing (incremental) | `src/inngest/functions/update-embeddings.ts` | Per-push re-index, SHA cache, deleted file handling |
-| Modify file chunking strategy | `src/lib/github/chunker.ts` | Function-level boundaries, line ranges, content SHA |
+| Modify file chunking strategy | `src/lib/github/chunker.ts`, `src/lib/github/tree-sitter/chunk.ts` | CST-first (TS/TSX/JS) then regex fallback; same `FileChunk` shape |
+| Modify CST structural digest | `src/lib/github/tree-sitter/digest.ts` | Symbol intersection with diff hunks; stored in `ai_content.commit_digests` |
+| Modify Tree-sitter grammar support | `src/lib/github/tree-sitter/parser.ts`, `scripts/copy-wasm.js` | Add grammar WASM; update `grammarForPath()`; re-run `node scripts/copy-wasm.js` |
 | Add email template | `src/lib/email/resend.ts` | Add new function, use inline HTML |
 | Add subscription logic | `src/lib/subscription.ts` | Update `TIER_LIMITS`, add tier-checking helpers |
 | Add new auth provider | `src/auth.ts` | Add to `providers` array, handle in `signIn` callback |
@@ -141,6 +147,8 @@ commitly/
 8. **UI token semantics**: `--brand` / `text-brand` = violet accent (links, active icon, highlights). `--primary` = solid black CTA buttons. Never use `text-primary` for inline links — use `text-brand`.
 9. **Dashboard chrome is in the layout**. `/dashboard/*` pages must NOT render their own `<header>` or outer `min-h-screen` wrapper — the `DashboardShell` in `dashboard/layout.tsx` provides these.
 10. **Server actions in client components**: place in a co-located `actions.ts` file with `"use server"` — do not inline `"use server"` inside client component function bodies.
+11. **Tree-sitter WASM must be in `public/wasm/`**. Run `node scripts/copy-wasm.js` after any `npm install` or grammar upgrade. Vercel runs `postinstall` automatically. `web-tree-sitter` is pinned to `^0.25.10` for ABI compatibility with `tree-sitter-wasms@0.1.13`.
+12. **Structural digest is stored per draft**. `release_drafts.ai_content.commit_digests` holds `{ sha, digest }[]` for each commit that had Tree-sitter-parseable changed files. This avoids re-fetching GitHub file content if content is ever regenerated. See blast-radius rule #12 before changing the digest shape.
 
 ---
 
@@ -163,6 +171,8 @@ commitly/
 | Call `getFileContext()` on deleted files | Check `f.status === 'removed'` first; call `handleDeletedFile()` instead | Deleted files have no content at the commit SHA — fetch will always return null |
 | Query `repo_file_chunks` with raw diff text as embedding input | Use the stored chunk embedding for cosine search; use `parseHunkRanges(diffText)` for line-range queries | Embedding the raw diff loses structural precision; line-range query is free and exact |
 | Forget to register new Inngest functions | Add to the `functions` array in `src/app/api/inngest/route.ts` | Inngest won't know about the function and events will be silently dropped |
+| Call `chunkFile()` without `await` | `chunkFile()` is now `async` (tries Tree-sitter first); missing `await` silently returns a Promise instead of chunks | Changed in CST upgrade — callers in `index-repo.ts` and `update-embeddings.ts` already updated |
+| Upgrade `web-tree-sitter` without checking `tree-sitter-wasms` ABI | Check `LANGUAGE_VERSION` constant after upgrade; grammars must match the runtime ABI | v0.26.x runtime is incompatible with grammars compiled for ≤0.25.x (dylink vs dylink.0 WASM section) |
 
 ---
 
@@ -213,10 +223,10 @@ commitly/
 3. Inngest `process-push` function (RAG-enhanced pipeline):
    - finds project → fetches diffs → **checks significance (early exit for ~60-70% of pushes)**
    - fires `github/repo.files-changed` as non-blocking side-effect → `update-embeddings` keeps vector store fresh
-   - **retrieve-context**: calls `getFileContext()` per changed file — line-range chunk query → GitHub file fetch → diff text → empty (4-level fallback); deleted files call `handleDeletedFile()` to purge stale chunks
-   - **explain-commits**: single batched GPT call with changed function chunks + related chunks + `repo_summary` → plain-English explanation per commit
+   - **retrieve-context**: calls `getFileContext()` per changed file — line-range chunk query → GitHub file fetch → diff text → empty (4-level fallback); deleted files call `handleDeletedFile()` to purge stale chunks; also runs `buildCommitDigest()` (Tree-sitter CST) to produce a compact `structuralDigest` per commit (symbol names + kinds that intersect changed hunks)
+   - **explain-commits**: single batched GPT call with changed function chunks + related chunks + `repo_summary` + structural digest (primary) → plain-English explanation per commit; digest replaces verbose raw diff in prompts → lower token cost
    - generates marketing content (changelog / LinkedIn / Twitter) with explanation-enriched context
-   - creates draft (stores `commit_explanations` in `ai_content` JSONB) → sends email
+   - creates draft (stores `commit_explanations` + `commit_digests` in `ai_content` JSONB) → sends email; stored digests skip re-fetching files on future regeneration
 
 **Repo Indexing Flow (on connect)**:
 1. `connectRepo` action fires `github/repo.connected` event

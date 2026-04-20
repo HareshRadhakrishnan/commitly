@@ -78,7 +78,7 @@ export const updateEmbeddings = inngest.createFunction(
           continue
         }
 
-        const chunks = chunkFile(content, file.path)
+        const chunks = await chunkFile(content, file.path)
         if (chunks.length === 0) continue
 
         const newShas = chunks.map((c) => c.contentSha)

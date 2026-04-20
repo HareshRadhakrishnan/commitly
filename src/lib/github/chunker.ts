@@ -1,4 +1,5 @@
 import { createHash } from "crypto"
+import { chunkFileWithCST } from "@/lib/github/tree-sitter/chunk"
 
 export type FileChunk = {
   content: string
@@ -43,15 +44,29 @@ function sha256(content: string): string {
 }
 
 /**
- * Splits a file's text content into function/class-level chunks.
- * Boundary detection uses heuristic regex patterns that cover TS/JS/Python/Go/Rust/Markdown.
+ * Splits a file into function/class-level chunks.
  *
- * If a single logical unit exceeds MAX_CHUNK_CHARS, it is further split by character count
- * with a small overlap to avoid losing context at split points.
+ * Tries Tree-sitter CST parsing first (TypeScript, TSX, JavaScript). On parse
+ * failure or for unsupported extensions, falls back to the heuristic regex
+ * approach below. Both paths return the same FileChunk shape.
+ */
+export async function chunkFile(content: string, filePath: string): Promise<FileChunk[]> {
+  const cstChunks = await chunkFileWithCST(content, filePath)
+  if (cstChunks && cstChunks.length > 0) return cstChunks
+  return chunkFileSync(content, filePath)
+}
+
+/**
+ * Regex-based chunker — used as fallback for languages not supported by
+ * Tree-sitter (Python, Go, Rust, Markdown, etc.) and when parsing fails.
+ *
+ * Boundary detection uses heuristic patterns that cover common language idioms.
+ * If a single logical unit exceeds MAX_CHUNK_CHARS, it is further split by
+ * character count with a small overlap to avoid losing context at split points.
  *
  * Returns chunks with 1-based line numbers for use in line-range overlap queries.
  */
-export function chunkFile(content: string, filePath: string): FileChunk[] {
+export function chunkFileSync(content: string, filePath: string): FileChunk[] {
   const lines = content.split("\n")
   const chunks: FileChunk[] = []
   let chunkIndex = 0
@@ -104,7 +119,7 @@ export function chunkFile(content: string, filePath: string): FileChunk[] {
       const slice = unitContent.slice(charOffset, charOffset + MAX_CHUNK_CHARS)
       const trimmed = slice.trim()
       if (trimmed) {
-        const sliceLines = slice.split("\n").length
+        const sliceLines = trimmed.split("\n").length
         chunks.push({
           content: trimmed,
           contentSha: sha256(trimmed),
@@ -112,7 +127,7 @@ export function chunkFile(content: string, filePath: string): FileChunk[] {
           endLine: Math.min(lineOffset + sliceLines - 1, unitEndLine),
           chunkIndex: chunkIndex++,
         })
-        lineOffset = Math.max(lineOffset, lineOffset + sliceLines - 1)
+        lineOffset = Math.min(lineOffset + sliceLines - 1, unitEndLine)
       }
       charOffset += MAX_CHUNK_CHARS - CHUNK_OVERLAP_CHARS
       if (charOffset >= unitContent.length) break

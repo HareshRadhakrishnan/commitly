@@ -62,7 +62,7 @@ export const indexRepo = inngest.createFunction(
         )
         if (!content) continue
 
-        const chunks = chunkFile(content, entry.path)
+        const chunks = await chunkFile(content, entry.path)
         for (const chunk of chunks) {
           results.push({
             project_id,

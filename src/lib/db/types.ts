@@ -31,6 +31,10 @@ export type ReleaseDraft = {
     changelog?: string;
     linkedin?: string;
     twitter?: string;
+    original_commits?: { id: string; message: string }[];
+    commit_explanations?: { sha: string; explanation: string }[];
+    /** CST-derived structural digest per commit — stored to avoid re-fetching files on regeneration. */
+    commit_digests?: { sha: string; digest: string }[];
   };
   status: "pending" | "approved" | "published";
   commit_shas?: string[] | null;

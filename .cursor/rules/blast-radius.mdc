@@ -30,4 +30,8 @@ Before committing, check these high-risk couplings:
 
 11. **Inngest event shapes — github/repo.files-changed**: If you change the payload sent by `process-push.ts` (e.g. field names in `changed_files`), MUST update `src/inngest/functions/update-embeddings.ts` (`UpdateEmbeddingsEventData` type) and the `ChangedFile` type in `update-embeddings.ts`.
 
+12. **CST digest ↔ ai_content keys**: `commit_digests` is stored in `release_drafts.ai_content` JSONB alongside `commit_explanations`. If you rename/restructure the digest shape in `src/lib/github/tree-sitter/digest.ts` (`buildCommitDigest` return value), MUST also update `src/inngest/functions/process-push.ts` (the `commit_digests` mapping in create-draft), `src/lib/db/release-drafts.ts` (`CreateReleaseDraftInput`), `src/lib/db/types.ts` (`ReleaseDraft.ai_content`), AND `src/app/dashboard/review/[logId]/page.tsx` (the content type cast and rendering).
+
+13. **Tree-sitter WASM versions**: `web-tree-sitter` and `tree-sitter-wasms` must stay on compatible ABI versions. Currently pinned to `web-tree-sitter@^0.25.10` + `tree-sitter-wasms@0.1.13` (ABI 13-15). If you upgrade either, run the smoke test (`npx tsx --tsconfig tsconfig.json src/lib/github/tree-sitter/smoke-test.ts`) before deploying. WASM files are copied to `public/wasm/` by `postinstall` (`scripts/copy-wasm.js`).
+
 Full maps: `AGENTS.md` → Key Invariants, Common Mistakes

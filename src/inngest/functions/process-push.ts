@@ -14,6 +14,8 @@ import { sendDraftNotificationEmail } from "@/lib/email/resend"
 import { fetchCommitDiff } from "@/lib/github/app"
 import { getBrandExamplesForUser } from "@/lib/db/brand-examples"
 import { getFileContext, handleDeletedFile } from "@/lib/github/context"
+import { fetchFileContent } from "@/lib/github/app"
+import { buildCommitDigest } from "@/lib/github/tree-sitter/digest"
 import { embedMany } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { queryRelatedChunks } from "@/lib/db/repo-chunks"
@@ -172,7 +174,36 @@ export const processPush = inngest.createFunction(
               }
             }
 
-            return { ...commit, retrievedContext }
+            // ── Build structural digest using Tree-sitter CST ──────────────────
+            // Fetch full file content for each non-deleted file (TS/JS/TSX only)
+            // and map changed hunk ranges to top-level symbol names. This gives
+            // the LLM precise "what changed" context at a fraction of the token
+            // cost of a full diff or file fetch.
+            let structuralDigest: string | undefined
+            if (hasInstallation) {
+              try {
+                const digestFiles = await Promise.all(
+                  contextFiles
+                    .filter((f) => f.status !== "removed" && f.patch)
+                    .slice(0, 4)
+                    .map(async (f) => ({
+                      filename: f.filename,
+                      patch: f.patch,
+                      content: await fetchFileContent(
+                        repository.full_name,
+                        installationId!,
+                        f.filename,
+                        commit.id,
+                      ).catch(() => null),
+                    }))
+                )
+                structuralDigest = await buildCommitDigest(digestFiles)
+              } catch {
+                // Non-fatal: digest is purely additive
+              }
+            }
+
+            return { ...commit, retrievedContext, structuralDigest }
           })
         )
       }
@@ -231,6 +262,9 @@ export const processPush = inngest.createFunction(
           commit_explanations: commitsWithExplanations
             .filter((c) => c.explanation)
             .map((c) => ({ sha: c.id.slice(0, 7), explanation: c.explanation! })),
+          commit_digests: commitsWithExplanations
+            .filter((c) => c.structuralDigest)
+            .map((c) => ({ sha: c.id.slice(0, 7), digest: c.structuralDigest! })),
         },
         commit_shas: commits.map((c) => c.id),
       })

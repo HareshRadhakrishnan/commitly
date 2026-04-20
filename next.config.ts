@@ -1,7 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  // Prevent webpack from trying to bundle WASM packages.
+  // These are loaded at runtime from public/wasm/ via fs.readFile.
+  serverExternalPackages: ["web-tree-sitter", "tree-sitter-wasms"],
+}
 
-export default nextConfig;
+export default nextConfig
