@@ -212,7 +212,8 @@ export const processPush = inngest.createFunction(
 
             if (!detail?.files?.length) return commit
 
-            // Handle deletions first (before any reordering)
+            // Handle deletions first — use the raw list so removed files are
+            // always purged from the vector store, even if denylisted.
             if (hasInstallation) {
               await Promise.all(
                 detail.files
@@ -220,6 +221,14 @@ export const processPush = inngest.createFunction(
                   .map((f) => handleDeletedFile(project.id, f.filename))
               )
             }
+
+            // Re-apply denylist to the fresh diff response. The fetch-diffs step
+            // already filtered changedFileDetails, but this is a second API call
+            // that returns the raw file list again. Without this, denylisted files
+            // re-enter the chunk-presence queries and contextFiles slot budget.
+            const meaningfulDetailFiles = filterByDenylist(
+              detail.files.filter((f) => f.status !== "removed") as CommitFile[]
+            )
 
             // ── Rank files for context retrieval ─────────────────────────────
             // Priority order (highest first):
@@ -232,12 +241,10 @@ export const processPush = inngest.createFunction(
             const chunkPresenceMap = new Map<string, boolean>()
             if (hasInstallation && project.id) {
               await Promise.all(
-                detail.files
-                  .filter((f) => f.status !== "removed")
-                  .map(async (f) => {
-                    const shas = await getChunkShasForFile(project.id, f.filename).catch(() => [])
-                    chunkPresenceMap.set(f.filename, shas.length > 0)
-                  })
+                meaningfulDetailFiles.map(async (f) => {
+                  const shas = await getChunkShasForFile(project.id, f.filename).catch(() => [])
+                  chunkPresenceMap.set(f.filename, shas.length > 0)
+                })
               )
             }
 
@@ -247,8 +254,7 @@ export const processPush = inngest.createFunction(
               return 2
             }
 
-            const contextFiles = [...detail.files]
-              .filter((f) => f.status !== "removed")
+            const contextFiles = [...meaningfulDetailFiles]
               .sort((a, b) => rankFile(a) - rankFile(b))
               .slice(0, MAX_CONTEXT_FILES_PER_COMMIT)
 
