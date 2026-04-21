@@ -9,7 +9,7 @@ import {
 import { getUserById } from "@/lib/db/users"
 import { getDraftCountForUserThisMonth, incrementDraftCount } from "@/lib/db/usage"
 import { canCreateDraft } from "@/lib/subscription"
-import { checkSignificance, explainCommits, generateContent } from "@/lib/ai/generate"
+import { checkSignificance, classifyFiles, explainCommits, generateContent } from "@/lib/ai/generate"
 import { sendDraftNotificationEmail } from "@/lib/email/resend"
 import { fetchCommitDiff } from "@/lib/github/app"
 import { getBrandExamplesForUser } from "@/lib/db/brand-examples"
@@ -18,7 +18,7 @@ import { fetchFileContent } from "@/lib/github/app"
 import { buildCommitDigest } from "@/lib/github/tree-sitter/digest"
 import { embedMany } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { queryRelatedChunks } from "@/lib/db/repo-chunks"
+import { queryRelatedChunks, getChunkShasForFile } from "@/lib/db/repo-chunks"
 import type { ChangedFile } from "./update-embeddings"
 
 type PushEventData = {
@@ -28,6 +28,53 @@ type PushEventData = {
     name: string
   }
   commits: PushCommit[]
+}
+
+type CommitFile = {
+  filename: string
+  status: string
+  additions: number
+  deletions: number
+  patch?: string
+}
+
+/**
+ * Removes files that are never meaningful for a user-facing changelog:
+ * lock files, env files, dotfiles, CI configs, and other pure infrastructure.
+ *
+ * Runs synchronously in fetch-diffs before any LLM call, so no token cost.
+ */
+const DENYLIST_EXACT = new Set([
+  "package-lock.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+  "bun.lockb",
+  ".gitignore",
+  ".gitattributes",
+  ".editorconfig",
+  ".npmrc",
+  ".nvmrc",
+  "Dockerfile",
+  "Makefile",
+])
+
+const DENYLIST_PATTERNS = [
+  /\.env(\..+)?$/i,        // .env, .env.local, .env.example, etc.
+  /\.example$/i,           // *.example
+  /\.lock$/i,              // *.lock
+  /docker-compose.*\.ya?ml$/i,
+  /\.(prettierrc|eslintrc|babelrc|stylelintrc)(\..*)?$/i,
+  /\.(cfg|ini|toml)$/i,
+  /\.github\//i,           // GitHub Actions, dependabot, etc.
+]
+
+function filterByDenylist(files: CommitFile[]): CommitFile[] {
+  return files.filter((f) => {
+    const base = f.filename.split("/").pop() ?? f.filename
+    if (DENYLIST_EXACT.has(base)) return false
+    if (DENYLIST_PATTERNS.some((re) => re.test(f.filename))) return false
+    return true
+  })
 }
 
 const DIFF_CHARS_PER_FILE = 1000
@@ -71,7 +118,18 @@ export const processPush = inngest.createFunction(
             )
             if (!detail?.files?.length) return base
 
-            const parts = detail.files
+            // Apply denylist before slicing — prevents config/env files from
+            // occupying the limited DIFF_FILES_PER_COMMIT slots.
+            const meaningfulFiles = filterByDenylist(detail.files as CommitFile[])
+
+            base.changedFileDetails = meaningfulFiles.map((f) => ({
+              filename: f.filename,
+              status: f.status,
+              additions: f.additions,
+              deletions: f.deletions,
+            }))
+
+            const parts = meaningfulFiles
               .slice(0, DIFF_FILES_PER_COMMIT)
               .map((f) => {
                 const patch = f.patch ?? ""
@@ -90,7 +148,7 @@ export const processPush = inngest.createFunction(
 
     // ── Step 2: significance check — EARLY EXIT for ~60-70% of pushes ────────
     const isSignificant = await step.run("check-significance", async () => {
-      return checkSignificance(commitsWithContext)
+      return checkSignificance(commitsWithContext, project.repo_summary ?? null)
     })
 
     if (!isSignificant) {
@@ -103,6 +161,40 @@ export const processPush = inngest.createFunction(
     // ── Step 3: fire embedding update (non-blocking, runs in parallel) ───────
     await fireEmbeddingUpdate(step, project, repository, commits, commitsWithContext)
 
+    // ── Step 3b: classify changed files by semantic relevance ────────────────
+    // Asks gpt-4o-mini (with repo_summary context) to label each file as
+    // "core" | "support" | "infra". Only "core" files drive context retrieval.
+    // Input is file paths + change counts only (~150 tokens), so this is cheap.
+    const commitsWithClassification = await step.run(
+      "classify-files",
+      async (): Promise<CommitWithContext[]> => {
+        try {
+          const categoryMap = await classifyFiles(
+            commitsWithContext,
+            project.repo_summary ?? null
+          )
+
+          return commitsWithContext.map((commit) => {
+            const coreFileNames = (commit.changedFileDetails ?? [])
+              .filter((f) => {
+                const cat = categoryMap.get(f.filename)
+                // If classifier returned no result for this file, keep it (safe default)
+                return cat === "core" || cat === undefined
+              })
+              .map((f) => f.filename)
+
+            return { ...commit, coreFileNames }
+          })
+        } catch {
+          // Non-fatal: fall back to all denylist-surviving files
+          return commitsWithContext.map((commit) => ({
+            ...commit,
+            coreFileNames: (commit.changedFileDetails ?? []).map((f) => f.filename),
+          }))
+        }
+      }
+    )
+
     // ── Step 4: retrieve context for each commit using tiered fallback ────────
     const commitsWithRetrievedContext = await step.run(
       "retrieve-context",
@@ -111,7 +203,7 @@ export const processPush = inngest.createFunction(
         const hasInstallation = typeof installationId === "number"
 
         return Promise.all(
-          commitsWithContext.map(async (commit) => {
+          commitsWithClassification.map(async (commit) => {
             const detail = await fetchCommitDiff(
               repository.full_name,
               hasInstallation ? installationId! : 0,
@@ -120,10 +212,7 @@ export const processPush = inngest.createFunction(
 
             if (!detail?.files?.length) return commit
 
-            const contextFiles = detail.files
-              .slice(0, MAX_CONTEXT_FILES_PER_COMMIT)
-
-            // Handle deletions first
+            // Handle deletions first (before any reordering)
             if (hasInstallation) {
               await Promise.all(
                 detail.files
@@ -132,10 +221,41 @@ export const processPush = inngest.createFunction(
               )
             }
 
-            // Get context for each non-deleted file using tiered fallback
+            // ── Rank files for context retrieval ─────────────────────────────
+            // Priority order (highest first):
+            //   1. Classified as "core" by the LLM classifier
+            //   2. Already indexed in repo_file_chunks (known code files)
+            //   3. All other surviving files
+            const coreSet = new Set(commit.coreFileNames ?? [])
+
+            // Chunk-presence check: DB query per file, no embedding needed
+            const chunkPresenceMap = new Map<string, boolean>()
+            if (hasInstallation && project.id) {
+              await Promise.all(
+                detail.files
+                  .filter((f) => f.status !== "removed")
+                  .map(async (f) => {
+                    const shas = await getChunkShasForFile(project.id, f.filename).catch(() => [])
+                    chunkPresenceMap.set(f.filename, shas.length > 0)
+                  })
+              )
+            }
+
+            const rankFile = (f: { filename: string }) => {
+              if (coreSet.has(f.filename)) return 0
+              if (chunkPresenceMap.get(f.filename)) return 1
+              return 2
+            }
+
+            const contextFiles = [...detail.files]
+              .filter((f) => f.status !== "removed")
+              .sort((a, b) => rankFile(a) - rankFile(b))
+              .slice(0, MAX_CONTEXT_FILES_PER_COMMIT)
+
+            // Get context for each ranked file using tiered fallback
             const retrievedContext: { filePath: string; content: string }[] = []
 
-            for (const file of contextFiles.filter((f) => f.status !== "removed")) {
+            for (const file of contextFiles) {
               if (!hasInstallation) continue
               const content = await getFileContext({
                 projectId: project.id,

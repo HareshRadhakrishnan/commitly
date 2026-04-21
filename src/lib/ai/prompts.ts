@@ -10,6 +10,10 @@ export type CommitWithContext = PushCommit & {
   retrievedContext?: { filePath: string; content: string }[]  // chunks from vector store / fallback
   explanation?: string    // plain-English explanation from explain-commits step
   structuralDigest?: string  // CST-derived symbol-level change summary (Tree-sitter)
+  /** All changed files surviving the denylist filter, in diff-fetch order. Set in fetch-diffs. */
+  changedFileDetails?: { filename: string; status: string; additions: number; deletions: number }[]
+  /** File paths classified as "core" by the LLM. Set in classify-files. Used to reorder retrieve-context. */
+  coreFileNames?: string[]
 }
 
 type BrandExamplesByPlatform = {
@@ -107,12 +111,67 @@ function formatCommitForGeneration(c: CommitWithContext): string {
   return `${header}${explanation}${diff}`
 }
 
-export function buildSignificancePrompt(commits: CommitWithContext[]): string {
+/**
+ * Builds the prompt for the file classification step.
+ *
+ * The LLM receives the repo purpose and the list of changed files (paths +
+ * change counts only — no patch content) and classifies each as:
+ *   "core"    — product/feature logic that users interact with
+ *   "support" — tests, scripts, build tooling
+ *   "infra"   — config, CI, docs, environment
+ *
+ * Only "core" files drive context retrieval and changelog generation.
+ * Input is intentionally tiny (~150 tokens) so this runs cheaply on every push.
+ */
+export function buildClassificationPrompt(
+  commits: CommitWithContext[],
+  repoSummary: string | null
+): string {
+  const repoContext = repoSummary
+    ? `Repo purpose: ${repoSummary}\n\n`
+    : ""
+
+  // Deduplicate file paths across all commits (a file may appear in multiple commits)
+  const seen = new Set<string>()
+  const fileLines: string[] = []
+
+  for (const commit of commits) {
+    for (const f of commit.changedFileDetails ?? []) {
+      if (seen.has(f.filename)) continue
+      seen.add(f.filename)
+      fileLines.push(`- ${f.filename} (+${f.additions}/-${f.deletions}) [${f.status}]`)
+    }
+  }
+
+  if (fileLines.length === 0) return ""
+
+  return `${repoContext}Classify each changed file based on the repo purpose above.
+
+Changed files:
+${fileLines.join("\n")}
+
+Categories:
+- "core": product or feature logic that end users interact with (source code, UI, API handlers, business logic)
+- "support": tests, scripts, build tooling, CI pipelines
+- "infra": config files, environment files, docs, lock files, CI YAMLs
+
+Return ONLY a valid JSON array, no markdown or extra text:
+[{ "filename": "path/to/file.ts", "category": "core" | "support" | "infra" }]`
+}
+
+export function buildSignificancePrompt(
+  commits: CommitWithContext[],
+  repoSummary: string | null = null
+): string {
   const commitBlocks = commits.map((c) => formatCommitForSignificance(c)).join("\n\n---\n\n")
+
+  const repoContext = repoSummary
+    ? `Repo purpose: ${repoSummary}\n\n`
+    : ""
 
   return `You are a technical product analyst. Look at these Git commits (messages, changed files, and code changes) and determine if they contain user-facing value.
 
-COMMITS:
+${repoContext}COMMITS:
 ${commitBlocks}
 
 Consider "significant" as: new features, major bug fixes, notable improvements, or breaking changes that affect users. Use the changed symbols or diff to see what actually changed—don't rely only on the commit message.
