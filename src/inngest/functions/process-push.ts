@@ -314,7 +314,7 @@ export const processPush = inngest.createFunction(
                     .slice(0, 4)
                     .map(async (f) => ({
                       filename: f.filename,
-                      patch: f.patch,
+                      patch: f.patch ?? null,
                       content: await fetchFileContent(
                         repository.full_name,
                         installationId!,
