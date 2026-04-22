@@ -10,6 +10,8 @@ import {
   upsertChunks,
   deleteChunksForProject,
 } from "@/lib/db/repo-chunks"
+import { buildImportGraph, formatCodeGraph } from "@/lib/github/tree-sitter/graph"
+import { updateCodeGraph } from "@/lib/db/projects"
 import { supabaseAdmin } from "@/lib/supabase/server"
 
 type IndexRepoEventData = {
@@ -41,9 +43,10 @@ export const indexRepo = inngest.createFunction(
 
     const filesToIndex = treeEntries.slice(0, MAX_FILES)
 
-    // Step 2: fetch content for each file and split into function-level chunks
-    const allChunks = await step.run("fetch-and-chunk", async () => {
-      const results: {
+    // Step 2: fetch content for each file, split into chunks, and collect raw
+    // file content for TS/JS/TSX files (needed for import graph building).
+    const { allChunks, graphFiles } = await step.run("fetch-and-chunk", async () => {
+      const chunks: {
         project_id: string
         file_path: string
         chunk_index: number
@@ -52,6 +55,11 @@ export const indexRepo = inngest.createFunction(
         start_line: number
         end_line: number
       }[] = []
+
+      // Only pass TS/JS/TSX content to the graph builder — keeps the Inngest
+      // step payload small while still covering all import-graph-relevant files.
+      const GRAPH_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs"])
+      const graphFiles: { path: string; content: string }[] = []
 
       for (const entry of filesToIndex) {
         const content = await fetchFileContent(
@@ -62,9 +70,14 @@ export const indexRepo = inngest.createFunction(
         )
         if (!content) continue
 
-        const chunks = await chunkFile(content, entry.path)
-        for (const chunk of chunks) {
-          results.push({
+        const ext = entry.path.slice(entry.path.lastIndexOf(".")).toLowerCase()
+        if (GRAPH_EXTENSIONS.has(ext)) {
+          graphFiles.push({ path: entry.path, content })
+        }
+
+        const fileChunks = await chunkFile(content, entry.path)
+        for (const chunk of fileChunks) {
+          chunks.push({
             project_id,
             file_path: entry.path,
             chunk_index: chunk.chunkIndex,
@@ -76,7 +89,7 @@ export const indexRepo = inngest.createFunction(
         }
       }
 
-      return results
+      return { allChunks: chunks, graphFiles }
     })
 
     if (allChunks.length === 0) {
@@ -100,8 +113,16 @@ export const indexRepo = inngest.createFunction(
       }
     })
 
-    // Step 4: fetch README and generate a plain-English repo summary
-    await step.run("summarize-repo", async () => {
+    // Step 4: build import graph from collected TS/JS/TSX file contents
+    await step.run("build-code-graph", async () => {
+      if (graphFiles.length === 0) return
+
+      const graph = await buildImportGraph(graphFiles)
+      await updateCodeGraph(project_id, graph)
+    })
+
+    // Step 5: fetch README and generate an architecture-aware repo summary
+    await step.run("generate-architecture-summary", async () => {
       const readmeContent = await fetchFileContent(
         repo_full_name,
         installation_id,
@@ -109,12 +130,33 @@ export const indexRepo = inngest.createFunction(
         "HEAD"
       )
 
-      if (!readmeContent) return
+      // Fetch the stored graph to include in the prompt (written in step 4)
+      const { data: projectRow } = await supabaseAdmin
+        .from("projects")
+        .select("code_graph")
+        .eq("id", project_id)
+        .maybeSingle()
+
+      const graph = projectRow?.code_graph ?? null
+      const graphBlock = graph ? `\n\nCode structure:\n${formatCodeGraph(graph as Parameters<typeof formatCodeGraph>[0])}` : ""
+      const readmeBlock = readmeContent
+        ? `\n\nREADME:\n${readmeContent.slice(0, 3000)}`
+        : ""
+
+      if (!readmeBlock && !graphBlock) return
 
       const { text } = await generateText({
         model: openai("gpt-4o-mini"),
-        prompt: `Summarize this repository in 2-3 sentences: what it does, who uses it, and its tech stack. Be concise and specific.\n\nREADME:\n${readmeContent.slice(0, 4000)}`,
-        maxOutputTokens: 150,
+        prompt: `You are summarizing a software repository for an AI system that will later use this summary to understand code changes.
+
+Write 3-5 sentences that cover:
+1. What the app does and who uses it
+2. Its key entry points (API routes, background jobs, UI pages)
+3. Its most-depended-on internal modules and what they handle
+4. The tech stack
+
+Be specific about the actual code structure, not just the product description.${readmeBlock}${graphBlock}`,
+        maxOutputTokens: 250,
       })
 
       await supabaseAdmin

@@ -16,6 +16,7 @@ import { getBrandExamplesForUser } from "@/lib/db/brand-examples"
 import { getFileContext, handleDeletedFile } from "@/lib/github/context"
 import { fetchFileContent } from "@/lib/github/app"
 import { buildCommitDigest } from "@/lib/github/tree-sitter/digest"
+import type { ImportGraph } from "@/lib/github/tree-sitter/graph"
 import { embedMany } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { queryRelatedChunks, getChunkShasForFile } from "@/lib/db/repo-chunks"
@@ -162,16 +163,18 @@ export const processPush = inngest.createFunction(
     await fireEmbeddingUpdate(step, project, repository, commits, commitsWithContext)
 
     // ── Step 3b: classify changed files by semantic relevance ────────────────
-    // Asks gpt-4o-mini (with repo_summary context) to label each file as
-    // "core" | "support" | "infra". Only "core" files drive context retrieval.
-    // Input is file paths + change counts only (~150 tokens), so this is cheap.
+    // Asks gpt-4o-mini (with repo_summary + code_graph context) to label each
+    // file as "core" | "support" | "infra". Only "core" files drive context
+    // retrieval. Input is file paths + change counts only (~150-200 tokens).
+    const codeGraph = (project.code_graph ?? null) as ImportGraph | null
     const commitsWithClassification = await step.run(
       "classify-files",
       async (): Promise<CommitWithContext[]> => {
         try {
           const categoryMap = await classifyFiles(
             commitsWithContext,
-            project.repo_summary ?? null
+            project.repo_summary ?? null,
+            codeGraph,
           )
 
           return commitsWithContext.map((commit) => {
@@ -233,9 +236,19 @@ export const processPush = inngest.createFunction(
             // ── Rank files for context retrieval ─────────────────────────────
             // Priority order (highest first):
             //   1. Classified as "core" by the LLM classifier
+            //      OR listed as a core module in the import graph (high centrality)
             //   2. Already indexed in repo_file_chunks (known code files)
             //   3. All other surviving files
-            const coreSet = new Set(commit.coreFileNames ?? [])
+            const graphCoreModulePaths = new Set(
+              (codeGraph?.coreModules ?? []).map((m) => m.path)
+            )
+            const coreSet = new Set([
+              ...(commit.coreFileNames ?? []),
+              // Also elevate files the graph identifies as highly-imported
+              ...meaningfulDetailFiles
+                .filter((f) => graphCoreModulePaths.has(f.filename))
+                .map((f) => f.filename),
+            ])
 
             // Chunk-presence check: DB query per file, no embedding needed
             const chunkPresenceMap = new Map<string, boolean>()
@@ -341,7 +354,8 @@ export const processPush = inngest.createFunction(
       async (): Promise<CommitWithContext[]> => {
         const explanations = await explainCommits(
           commitsWithRetrievedContext,
-          project.repo_summary ?? null
+          project.repo_summary ?? null,
+          codeGraph,
         )
 
         const explanationMap = new Map(explanations.map((e) => [e.sha, e.explanation]))

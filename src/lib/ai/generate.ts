@@ -8,6 +8,7 @@ import {
   buildClassificationPrompt,
 } from "./prompts"
 import type { BrandExample } from "@/lib/db/types"
+import type { ImportGraph } from "@/lib/github/tree-sitter/graph"
 
 export async function checkSignificance(
   commits: CommitWithContext[],
@@ -25,11 +26,12 @@ export async function checkSignificance(
 
 export async function explainCommits(
   commits: CommitWithContext[],
-  repoSummary: string | null
+  repoSummary: string | null,
+  codeGraph: ImportGraph | null = null,
 ): Promise<{ sha: string; explanation: string }[]> {
   const { text } = await generateText({
     model: openai("gpt-4o-mini"),
-    prompt: buildExplanationPrompt(commits, repoSummary),
+    prompt: buildExplanationPrompt(commits, repoSummary, codeGraph),
     maxOutputTokens: 1200,
   })
 
@@ -62,9 +64,10 @@ export async function explainCommits(
  */
 export async function classifyFiles(
   commits: CommitWithContext[],
-  repoSummary: string | null
+  repoSummary: string | null,
+  codeGraph: ImportGraph | null = null,
 ): Promise<Map<string, "core" | "support" | "infra">> {
-  const prompt = buildClassificationPrompt(commits, repoSummary)
+  const prompt = buildClassificationPrompt(commits, repoSummary, codeGraph)
   if (!prompt) return new Map()
 
   const { text } = await generateText({

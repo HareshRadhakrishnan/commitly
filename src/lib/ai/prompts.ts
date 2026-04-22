@@ -1,5 +1,7 @@
 import type { PushCommit } from "@/lib/github/webhook"
 import type { BrandExample } from "@/lib/db/types"
+import type { ImportGraph } from "@/lib/github/tree-sitter/graph"
+import { formatCodeGraph } from "@/lib/github/tree-sitter/graph"
 
 // Per-file context cap for the explanation prompt — keeps each file's contribution
 // well within the budget of a single gpt-4o-mini call even for multi-file commits.
@@ -125,10 +127,17 @@ function formatCommitForGeneration(c: CommitWithContext): string {
  */
 export function buildClassificationPrompt(
   commits: CommitWithContext[],
-  repoSummary: string | null
+  repoSummary: string | null,
+  codeGraph: ImportGraph | null = null,
 ): string {
   const repoContext = repoSummary
     ? `Repo purpose: ${repoSummary}\n\n`
+    : ""
+
+  // Inject the code graph so the classifier knows which files are structural
+  // entry points or core modules — independent of file naming conventions.
+  const graphContext = codeGraph
+    ? `Code structure:\n${formatCodeGraph(codeGraph)}\n\n`
     : ""
 
   // Deduplicate file paths across all commits (a file may appear in multiple commits)
@@ -145,7 +154,7 @@ export function buildClassificationPrompt(
 
   if (fileLines.length === 0) return ""
 
-  return `${repoContext}Classify each changed file based on the repo purpose above.
+  return `${repoContext}${graphContext}Classify each changed file based on the repo purpose and code structure above.
 
 Changed files:
 ${fileLines.join("\n")}
@@ -154,6 +163,8 @@ Categories:
 - "core": product or feature logic that end users interact with (source code, UI, API handlers, business logic)
 - "support": tests, scripts, build tooling, CI pipelines
 - "infra": config files, environment files, docs, lock files, CI YAMLs
+
+Use the "Code structure" section above to help — entry points and highly-imported modules are always "core".
 
 Return ONLY a valid JSON array, no markdown or extra text:
 [{ "filename": "path/to/file.ts", "category": "core" | "support" | "infra" }]`
@@ -182,10 +193,17 @@ Answer with exactly one word: YES or NO`
 
 export function buildExplanationPrompt(
   commits: CommitWithContext[],
-  repoSummary: string | null
+  repoSummary: string | null,
+  codeGraph: ImportGraph | null = null,
 ): string {
   const repoContext = repoSummary
     ? `Repo context: ${repoSummary}\n\n`
+    : ""
+
+  // Include the code graph so the explainer understands each changed file's
+  // structural role: whether it's an entry point, a highly-shared utility, etc.
+  const graphContext = codeGraph
+    ? `Code structure:\n${formatCodeGraph(codeGraph)}\n\n`
     : ""
 
   const commitBlocks = commits
@@ -194,9 +212,9 @@ export function buildExplanationPrompt(
 
   return `You are a senior engineer reviewing a code change.
 
-${repoContext}For each commit below, explain:
+${repoContext}${graphContext}For each commit below, explain:
 1. What changed (be specific about the code, not just the commit message)
-2. Why it matters (impact on the system or users)
+2. Why it matters (impact on the system or users) — use the code structure above to assess blast radius
 3. Any risks or improvements to be aware of
 
 ${commitBlocks}
